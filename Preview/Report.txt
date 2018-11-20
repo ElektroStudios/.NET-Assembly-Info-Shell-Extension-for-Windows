@@ -1,0 +1,42 @@
+C:\WinExe (AnyCPU, Prefer 32-Bit).exe
+
+Product
+-------
+File Name          : WinExe (AnyCPU, Prefer 32-Bit).exe
+Original Name      : WinForms Test Assembly.exe
+Product Name       : WinForms Test Assembly (Any CPU)
+Product Description: WinForms Test Assembly
+Company Name       : ElektroStudios
+Copyright          : Copyright © Elektro Studios 2018
+File Version       : 1.1.0.0
+Product Version    : 1.0.0.0
+Language           : English (United States) (en-US)
+
+Build
+-----
+PE File Kind             : Window application (GUI)
+Platform                 : Any CPU ( Prefer 32-bit )
+Build Configuration      : Release
+CLR Version              : 4.0.30319
+Target .NET Framework    : 4.6.1
+Entry-Point Address      : 0x1810A
+Root Namespace           : WinForms_Test_Assembly
+Is Strong-Name Signed    : Yes
+Public Key Token         : 33C6CD5B1C922286
+Security Permission      : RequestMinimum
+Dll Import Search Paths  : ApplicationDirectory, System32
+Is CLS Compliant         : Yes
+Is COM Visible           : Yes
+Is DPI Awareness Disabled: No
+Is Installed in GAC      : No
+GAC Name                 : (null)
+GAC Path                 : (null)
+
+Identity
+--------
+Assembly GUID        : B9ADB13A-BC56-4615-8213-9A055D0B1F0F
+Compilation TimeStamp: 05/November/2018 00:00:31
+MD5 Hash             : 2513EEE50A84E736693982FA0BB40CA9
+SHA-1 Hash           : 618F35E78A58E8DFBD20FC28EA91D84FC126E8D0
+SHA-256 Hash         : 4BF3FF7B98819C9F1FB0B9C260BCF210A119C1B63CC328BF8CD3D8544FF447B5
+
