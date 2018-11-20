@@ -1,0 +1,1 @@
+# .NET Assembly Info ShellEx
