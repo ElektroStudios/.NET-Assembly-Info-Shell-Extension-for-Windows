@@ -23,6 +23,7 @@ See screenshots below to know what information you can obtain. Future updates of
 ### Third party libraries used to develop this project:
 
  - A partial, small, free sample of [ElektroKit Framework for .NET](https://codecanyon.net/item/elektrokit-class-library-for-net/19260282) source-code.
+ 
    ( If you would like to support me, buying my library would be great. )
  - [SharpShell](https://github.com/dwmkerr/sharpshell)
  - [System.Collections.Immutable](https://www.nuget.org/packages/System.Collections.Immutable/)
