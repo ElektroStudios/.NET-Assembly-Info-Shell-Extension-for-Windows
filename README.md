@@ -22,7 +22,8 @@ See screenshots below to know what information you can obtain. Future updates of
 
 ### Third party libraries used to develop this project:
 
- - [Free samples of ElektroKit Framework for .NET](https://codecanyon.net/item/elektrokit-class-library-for-net/19260282)
+ - [A free sample of ElektroKit Framework for .NET](https://codecanyon.net/item/elektrokit-class-library-for-net/19260282)
+   ( If you would like to support me. )
  - [SharpShell](https://github.com/dwmkerr/sharpshell)
  - [System.Collections.Immutable](https://www.nuget.org/packages/System.Collections.Immutable/)
  - [System.Reflection.Metadata](https://www.nuget.org/packages/System.Reflection.Metadata/)
