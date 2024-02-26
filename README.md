@@ -42,7 +42,7 @@ Download the latest release by clicking [here](https://github.com/ElektroStudios
 
 After you have installed the shell-extension, do right click on a .dll or .exe file (that is built with .NET Framework or .NET Core) to show the file menu,  click on the "Properties" option, and finally you will see a tab with name "AssemblyInfo" (see the 'Screenshots' section of this README).
 
-From the tab with "AssemblyInfo", you can get see the information that this shell-extension can provide, also, you can use the button with name "Export" to generate a report like in this example:
+From the tab with name "AssemblyInfo", you can get see the information that this shell-extension can provide, also, you can use the button with name "Export" to generate a report like in this example:
 
     C:\WinExe (AnyCPU, Prefer 32-Bit).exe
      
