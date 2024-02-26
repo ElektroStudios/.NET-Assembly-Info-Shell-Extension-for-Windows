@@ -10,10 +10,10 @@ Imports System.Runtime.InteropServices
 ' Review the values of the assembly attributes
 
 <Assembly: AssemblyTitle(".NET Assembly Info Shell-Extension")>
-<Assembly: AssemblyDescription("A property sheet shell-extension for .NET assemblies")>
+<Assembly: AssemblyDescription("A shell-extension that shows info about .NET assemblies on the file properties")>
 <Assembly: AssemblyCompany("ElektroStudios")>
 <Assembly: AssemblyProduct(".NET Assembly Info Shell-Extension")>
-<Assembly: AssemblyCopyright("Copyright © Elektro Studios 2018")>
+<Assembly: AssemblyCopyright("Copyright © ElektroStudios 2018-2024")>
 <Assembly: AssemblyTrademark("")>
 
 <Assembly: ComVisible(False)>
@@ -32,6 +32,6 @@ Imports System.Runtime.InteropServices
 ' by using the '*' as shown below:
 ' <Assembly: AssemblyVersion("1.0.*")>
 
-<Assembly: AssemblyVersion("1.0.0.0")>
-<Assembly: AssemblyFileVersion("1.0.0.0")>
+<Assembly: AssemblyVersion("1.1.0.0")>
+<Assembly: AssemblyFileVersion("1.1.0.0")>
 <Assembly: NeutralResourcesLanguage("en-US")>

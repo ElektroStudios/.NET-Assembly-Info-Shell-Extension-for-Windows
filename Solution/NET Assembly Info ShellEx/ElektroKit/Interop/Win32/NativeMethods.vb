@@ -77,7 +77,7 @@ Namespace ElektroKit.Interop.Unmanaged.Win32
         <SuppressUnmanagedCodeSecurity>
         <DllImport("Fusion.dll")>
         Friend Shared Function CreateAssemblyCache(ByRef refAsmCache As IAssemblyCache,
-                                                   ByVal reserved As Integer
+reserved As Integer
         ) As Integer
         End Function
 
@@ -131,7 +131,7 @@ Namespace ElektroKit.Interop.Unmanaged.Win32
         ''' ----------------------------------------------------------------------------------------------------
         <EditorBrowsable(EditorBrowsableState.Never)>
         <DebuggerNonUserCode>
-        Public Shadows Function Equals(ByVal obj As Object) As Boolean
+        Public Shadows Function Equals(obj As Object) As Boolean
             Return MyBase.Equals(obj)
         End Function
 
@@ -157,7 +157,7 @@ Namespace ElektroKit.Interop.Unmanaged.Win32
         ''' ----------------------------------------------------------------------------------------------------
         <EditorBrowsable(EditorBrowsableState.Never)>
         <DebuggerNonUserCode>
-        Public Shared Shadows Function Equals(ByVal objA As Object, ByVal objB As Object) As Boolean
+        Public Shared Shadows Function Equals(objA As Object, objB As Object) As Boolean
             Return Object.Equals(objA, objB)
         End Function
 
@@ -181,7 +181,7 @@ Namespace ElektroKit.Interop.Unmanaged.Win32
         ''' ----------------------------------------------------------------------------------------------------
         <EditorBrowsable(EditorBrowsableState.Never)>
         <DebuggerNonUserCode>
-        Public Shared Shadows Function ReferenceEquals(ByVal objA As Object, ByVal objB As Object) As Boolean
+        Public Shared Shadows Function ReferenceEquals(objA As Object, objB As Object) As Boolean
             Return Object.ReferenceEquals(objA, objB)
         End Function
 

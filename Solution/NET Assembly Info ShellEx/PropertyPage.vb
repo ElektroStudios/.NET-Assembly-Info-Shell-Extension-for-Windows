@@ -39,6 +39,13 @@ Partial Public Class PropertyPage : Inherits SharpPropertyPage
 
     ''' ----------------------------------------------------------------------------------------------------
     ''' <summary>
+    ''' The source AssemblyInfo.
+    ''' </summary>
+    ''' ----------------------------------------------------------------------------------------------------
+    Private asmInfo As AssemblyInfo
+
+    ''' ----------------------------------------------------------------------------------------------------
+    ''' <summary>
     ''' Keep track of the current shown ListView to perform copy operations from the context menu.
     ''' </summary>
     ''' ----------------------------------------------------------------------------------------------------
@@ -115,6 +122,28 @@ Partial Public Class PropertyPage : Inherits SharpPropertyPage
         Me.PageTitle = Me.Name
         Me.PageIcon = My.Resources.VisualStudio
 
+        Me.currentListView = Me.TabControlListViews.TabPages(0).Controls.OfType(Of ListView).Single()
+
+        Me.ListViewProduct.Text = "Product"
+        Me.ListViewProduct.Tag = Me.lvItemsProductDict
+
+        Me.ListViewBuild.Text = "Build"
+        Me.ListViewBuild.Tag = Me.lvItemsBuildDict
+
+        Me.ListViewIdentity.Text = "Identity"
+        Me.ListViewIdentity.Tag = Me.lvItemsIdentityDict
+
+#If DEBUG Then
+        Me.filePath = "C:\File.dll"
+        If Not File.Exists(Me.filePath) Then
+            MessageBox.Show(Nothing, $"[DEBUG] Test dll file not found: {Me.filePath}", My.Application.Info.Title, MessageBoxButtons.OK, MessageBoxIcon.Error)
+            Environment.Exit(1)
+        End If
+
+        Me.LoadAssemblyInfo()
+        Me.LoadListViewItems(Me.currentListView)
+#End If
+
     End Sub
 
 #End Region
@@ -130,19 +159,8 @@ Partial Public Class PropertyPage : Inherits SharpPropertyPage
     ''' The parent property sheet.
     ''' </param>
     ''' ----------------------------------------------------------------------------------------------------
-    Protected Overrides Sub OnPropertyPageInitialised(ByVal e As SharpPropertySheet)
+    Protected Overrides Sub OnPropertyPageInitialised(e As SharpPropertySheet)
         Me.filePath = e.SelectedItemPaths.Single()
-
-        Me.currentListView = Me.TabControlListViews.TabPages(0).Controls.OfType(Of ListView).Single()
-
-        Me.ListViewProduct.Text = "Product"
-        Me.ListViewProduct.Tag = Me.lvItemsProductDict
-
-        Me.ListViewBuild.Text = "Build"
-        Me.ListViewBuild.Tag = Me.lvItemsBuildDict
-
-        Me.ListViewIdentity.Text = "Identity"
-        Me.ListViewIdentity.Tag = Me.lvItemsIdentityDict
 
         Me.LoadAssemblyInfo()
         Me.LoadListViewItems(Me.currentListView)
@@ -167,7 +185,7 @@ Partial Public Class PropertyPage : Inherits SharpPropertyPage
     ''' The <see cref="EventArgs"/> instance containing the event data.
     ''' </param>
     ''' ----------------------------------------------------------------------------------------------------
-    Private Sub TabControlListViews_SelectedIndexChanged(ByVal sender As Object, ByVal e As EventArgs) Handles TabControlListViews.SelectedIndexChanged
+    Private Sub TabControlListViews_SelectedIndexChanged(sender As Object, e As EventArgs) Handles TabControlListViews.SelectedIndexChanged
 
         Me.currentListView = DirectCast(sender, TabControlFix).SelectedTab.Controls.OfType(Of ListView).Single()
         Me.LoadListViewItems(Me.currentListView)
@@ -187,7 +205,7 @@ Partial Public Class PropertyPage : Inherits SharpPropertyPage
     ''' The <see cref="EventArgs"/> instance containing the event data.
     ''' </param>
     ''' ----------------------------------------------------------------------------------------------------
-    Private Sub CopyToolStripMenuItem_Click(ByVal sender As Object, ByVal e As EventArgs) Handles CopyToolStripMenuItem.Click
+    Private Sub CopyToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles CopyToolStripMenuItem.Click
 
         Dim str As String = String.Format("{0}: {1}", Me.currentListView.SelectedItems(0).SubItems(0).Text,
                                                       Me.currentListView.SelectedItems(0).SubItems(1).Text)
@@ -245,7 +263,7 @@ Partial Public Class PropertyPage : Inherits SharpPropertyPage
     ''' ----------------------------------------------------------------------------------------------------
     Private Sub LoadAssemblyInfo()
 
-        Dim asmInfo As AssemblyInfo = New AssemblyInfo(Me.filePath)
+        asmInfo = New AssemblyInfo(Me.filePath)
 
         ' ListViewProduct Items
 
@@ -283,7 +301,6 @@ Partial Public Class PropertyPage : Inherits SharpPropertyPage
               String.Format("{0} ({1})", asmInfo.DefaultCulture.EnglishName, asmInfo.DefaultCulture.Name), "(null)"))
 
         ' ListViewBuild Items
-
         Me.lvItemsBuildDict("PE File Kind").SubItems.Add(
             asmInfo.PeFileKind)
 
@@ -371,7 +388,7 @@ Partial Public Class PropertyPage : Inherits SharpPropertyPage
     ''' If <see langword="True"/>, also adds "(null)" values to the List View.
     ''' </param>
     ''' ----------------------------------------------------------------------------------------------------
-    Private Sub LoadListViewItems(ByVal lv As ListView)
+    Private Sub LoadListViewItems(lv As ListView)
 
         Dim dict As Dictionary(Of String, ListViewItem) = DirectCast(lv.Tag, Dictionary(Of String, ListViewItem))
 
@@ -379,7 +396,33 @@ Partial Public Class PropertyPage : Inherits SharpPropertyPage
         lv.Items.Clear()
 
         For Each lvItem As ListViewItem In dict.Values
-            lv.Items.Add(lvItem)
+            If asmInfo.IsNetCore Then
+                Select Case lvItem.Text
+                    Case Me.lvItemsProductDict("Language").Text,
+                         Me.lvItemsIdentityDict("Assembly GUID").Text,
+                         Me.lvItemsIdentityDict("Compilation TimeStamp").Text,
+                         Me.lvItemsBuildDict("Is DPI Awareness Disabled").Text,
+                         Me.lvItemsBuildDict("Dll Import Search Paths").Text,
+                         Me.lvItemsBuildDict("Is CLS Compliant").Text,
+                         Me.lvItemsBuildDict("Is COM Visible").Text,
+                         Me.lvItemsBuildDict("Security Permission").Text,
+                         Me.lvItemsBuildDict("Is Installed in GAC").Text,
+                         Me.lvItemsBuildDict("GAC Name").Text,
+                         Me.lvItemsBuildDict("GAC Path").Text,
+                         Me.lvItemsBuildDict("Target .NET Framework").Text
+
+                        ' IGNORE, values can't be retrieved for .NET Core assembly.
+
+                    Case Else
+                        lv.Items.Add(lvItem)
+
+                End Select
+
+            Else
+                lv.Items.Add(lvItem)
+
+            End If
+
         Next lvItem
 
         lv.EndUpdate()
@@ -395,7 +438,7 @@ Partial Public Class PropertyPage : Inherits SharpPropertyPage
     ''' The destination txt file path.
     ''' </param>
     ''' ----------------------------------------------------------------------------------------------------
-    Private Sub SaveAsTextFile(ByVal filePath As String)
+    Private Sub SaveAsTextFile(filePath As String)
 
         Dim sb As New StringBuilder()
 

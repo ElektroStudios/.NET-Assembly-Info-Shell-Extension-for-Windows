@@ -13,6 +13,7 @@ Imports System.Collections.Specialized
 Imports System.Globalization
 Imports System.IO
 Imports System.Reflection
+Imports System.Reflection.Metadata
 Imports System.Reflection.PortableExecutable
 Imports System.Resources
 Imports System.Runtime.InteropServices
@@ -61,6 +62,13 @@ Public NotInheritable Class AssemblyInfo
 
     ''' ----------------------------------------------------------------------------------------------------
     ''' <summary>
+    ''' Gets a value that determines whether the loaded assembly ia a .NET Core assembly.
+    ''' </summary>
+    ''' ----------------------------------------------------------------------------------------------------
+    Public ReadOnly Property IsNetCore As Boolean
+
+    ''' ----------------------------------------------------------------------------------------------------
+    ''' <summary>
     ''' Gets the <see cref="System.Reflection.AssemblyName"/> of the loaded assembly.
     ''' </summary>
     ''' ----------------------------------------------------------------------------------------------------
@@ -94,7 +102,7 @@ Public NotInheritable Class AssemblyInfo
                 Return "Any CPU ( Prefer 32-bit )"
 
             Else
-                Return "Any CPU"
+                Return "Any CPU ( Prefer 64-bit )"
 
             End If
         End Get
@@ -118,11 +126,11 @@ Public NotInheritable Class AssemblyInfo
     ''' ----------------------------------------------------------------------------------------------------
     Public ReadOnly Property TargetNetFrameworkName As String
         Get
-            Dim attrib As TargetFrameworkAttribute = Me.assembly.GetCustomAttribute(Of TargetFrameworkAttribute)
-            If (attrib Is Nothing) Then
-                Return String.Empty
+            If Not Me.IsNetCore Then
+                Dim attrib As TargetFrameworkAttribute = Me.assembly.GetCustomAttribute(Of TargetFrameworkAttribute)
+                Return If((attrib Is Nothing), String.Empty, attrib.FrameworkDisplayName)
             Else
-                Return attrib.FrameworkDisplayName
+
             End If
         End Get
     End Property
@@ -134,12 +142,16 @@ Public NotInheritable Class AssemblyInfo
     ''' ----------------------------------------------------------------------------------------------------
     Public ReadOnly Property TargetNetFrameworkVersion As Version
         Get
-            Dim attrib As TargetFrameworkAttribute = Me.assembly.GetCustomAttribute(Of TargetFrameworkAttribute)
-            If (attrib IsNot Nothing) Then
-                Dim nameValues As NameValueCollection = HttpUtility.ParseQueryString(attrib.FrameworkName.Replace(","c, "&"c))
-                Return New Version(nameValues("Version").TrimStart("v"c))
+            If Not Me.IsNetCore Then
+                Dim attrib As TargetFrameworkAttribute = Me.assembly.GetCustomAttribute(Of TargetFrameworkAttribute)
+                If (attrib IsNot Nothing) Then
+                    Dim nameValues As NameValueCollection = HttpUtility.ParseQueryString(attrib.FrameworkName.Replace(","c, "&"c))
+                    Return New Version(nameValues("Version").TrimStart("v"c))
+                Else
+                    Return Nothing
+                End If
             Else
-                Return Nothing
+
             End If
         End Get
     End Property
@@ -151,13 +163,11 @@ Public NotInheritable Class AssemblyInfo
     ''' ----------------------------------------------------------------------------------------------------
     Public ReadOnly Property DefaultCulture As CultureInfo
         Get
-            Dim attrib As NeutralResourcesLanguageAttribute = Me.assembly.GetCustomAttribute(Of NeutralResourcesLanguageAttribute)
-            If (attrib Is Nothing) Then
-                Return Nothing
+            If Not Me.IsNetCore Then
+                Dim attrib As NeutralResourcesLanguageAttribute = Me.assembly.GetCustomAttribute(Of NeutralResourcesLanguageAttribute)
+                Return If((attrib Is Nothing), Nothing, New CultureInfo(attrib.CultureName))
             Else
-                Return New CultureInfo(attrib.CultureName)
             End If
-
         End Get
     End Property
 
@@ -180,11 +190,7 @@ Public NotInheritable Class AssemblyInfo
     Public ReadOnly Property IsInstalledInGAC As Boolean
         Get
             If (Me.isInstalledInGacB = TriState.UseDefault) Then
-                If (Me.IsStrongNameSigned AndAlso Me.GetIsAssemblyInGAC()) Then
-                    Me.isInstalledInGacB = TriState.True
-                Else
-                    Me.isInstalledInGacB = TriState.False
-                End If
+                Me.isInstalledInGacB = If((Me.IsStrongNameSigned AndAlso Me.GetIsAssemblyInGAC()), TriState.True, TriState.False)
             End If
             Return CBool(Me.isInstalledInGacB)
         End Get
@@ -205,10 +211,9 @@ Public NotInheritable Class AssemblyInfo
     ''' ----------------------------------------------------------------------------------------------------
     Public ReadOnly Property GacFullName As String
         Get
-            If Not (Me.IsInstalledInGAC) Then
-                Return Nothing
-            End If
-            Return String.Format("{0}, ProcessorArchitecture={1}", Me.AssemblyName.FullName, Me.AssemblyName.ProcessorArchitecture.ToString().ToUpper())
+            Return If(Not (Me.IsInstalledInGAC),
+                Nothing,
+                String.Format("{0}, ProcessorArchitecture={1}", Me.AssemblyName.FullName, Me.AssemblyName.ProcessorArchitecture.ToString().ToUpper()))
         End Get
     End Property
 
@@ -219,10 +224,7 @@ Public NotInheritable Class AssemblyInfo
     ''' ----------------------------------------------------------------------------------------------------
     Public ReadOnly Property GacPath As String
         Get
-            If Not (Me.IsInstalledInGAC) Then
-                Return Nothing
-            End If
-            Return Me.assembly.Location
+            Return If(Not (Me.IsInstalledInGAC), Nothing, Me.assembly.Location)
         End Get
     End Property
 
@@ -311,11 +313,10 @@ Public NotInheritable Class AssemblyInfo
     ''' ----------------------------------------------------------------------------------------------------
     Public ReadOnly Property Guid As Guid
         Get
-            Dim attrib As GuidAttribute = Me.assembly.GetCustomAttribute(Of GuidAttribute)
-            If (attrib Is Nothing) Then
-                Return Nothing
+            If Not Me.IsNetCore Then
+                Dim attrib As GuidAttribute = Me.assembly.GetCustomAttribute(Of GuidAttribute)
+                Return If((attrib Is Nothing), Nothing, New Guid(attrib.Value))
             Else
-                Return New Guid(attrib.Value)
             End If
         End Get
     End Property
@@ -327,11 +328,10 @@ Public NotInheritable Class AssemblyInfo
     ''' ----------------------------------------------------------------------------------------------------
     Public ReadOnly Property IsCOMVisible As Boolean
         Get
-            Dim attrib As ComVisibleAttribute = Me.assembly.GetCustomAttribute(Of ComVisibleAttribute)
-            If (attrib Is Nothing) Then
-                Return False
+            If Not Me.IsNetCore Then
+                Dim attrib As ComVisibleAttribute = Me.assembly.GetCustomAttribute(Of ComVisibleAttribute)
+                Return attrib IsNot Nothing AndAlso attrib.Value
             Else
-                Return attrib.Value
             End If
         End Get
     End Property
@@ -343,11 +343,10 @@ Public NotInheritable Class AssemblyInfo
     ''' ----------------------------------------------------------------------------------------------------
     Public ReadOnly Property IsClsCompliant As Boolean
         Get
-            Dim attrib As CLSCompliantAttribute = Me.assembly.GetCustomAttribute(Of CLSCompliantAttribute)
-            If (attrib Is Nothing) Then
-                Return False
+            If Not Me.IsNetCore Then
+                Dim attrib As CLSCompliantAttribute = Me.assembly.GetCustomAttribute(Of CLSCompliantAttribute)
+                Return attrib IsNot Nothing AndAlso attrib.IsCompliant
             Else
-                Return attrib.IsCompliant
             End If
         End Get
     End Property
@@ -359,7 +358,10 @@ Public NotInheritable Class AssemblyInfo
     ''' ----------------------------------------------------------------------------------------------------
     Public ReadOnly Property SecurityPermission As SecurityPermissionAttribute
         Get
-            Return Me.assembly.GetCustomAttribute(Of SecurityPermissionAttribute)
+            If Not Me.IsNetCore Then
+                Return Me.assembly.GetCustomAttribute(Of SecurityPermissionAttribute)
+            Else
+            End If
         End Get
     End Property
 
@@ -371,8 +373,11 @@ Public NotInheritable Class AssemblyInfo
     ''' ----------------------------------------------------------------------------------------------------
     Public ReadOnly Property IsDpiAwarenessDisabled As Boolean
         Get
-            Dim attrib As DisableDpiAwarenessAttribute = Me.assembly.GetCustomAttribute(Of DisableDpiAwarenessAttribute)
-            Return (attrib IsNot Nothing)
+            If Not Me.IsNetCore Then
+                Dim attrib As DisableDpiAwarenessAttribute = Me.assembly.GetCustomAttribute(Of DisableDpiAwarenessAttribute)
+                Return (attrib IsNot Nothing)
+            Else
+            End If
         End Get
     End Property
 
@@ -383,11 +388,10 @@ Public NotInheritable Class AssemblyInfo
     ''' ----------------------------------------------------------------------------------------------------
     Public ReadOnly Property DefaultDllImportSearchPaths As DllImportSearchPath
         Get
-            Dim attrib As DefaultDllImportSearchPathsAttribute = Me.assembly.GetCustomAttribute(Of DefaultDllImportSearchPathsAttribute)
-            If (attrib IsNot Nothing) Then
-                Return attrib.Paths
+            If Not Me.IsNetCore Then
+                Dim attrib As DefaultDllImportSearchPathsAttribute = Me.assembly.GetCustomAttribute(Of DefaultDllImportSearchPathsAttribute)
+                Return If((attrib IsNot Nothing), attrib.Paths, Nothing)
             Else
-                Return Nothing
             End If
         End Get
     End Property
@@ -399,10 +403,13 @@ Public NotInheritable Class AssemblyInfo
     ''' ----------------------------------------------------------------------------------------------------
     Public ReadOnly Property TimeStamp As DateTimeOffset
         Get
-            Dim secondsSince1970 As Integer = Me.PeHeader.CoffHeader.TimeDateStamp
-            Dim dt As DateTimeOffset = (New DateTimeOffset(1970, 1, 1, 0, 0, 0, DateTimeOffset.Now.Offset) + DateTimeOffset.Now.Offset)
-            dt = dt.AddSeconds(secondsSince1970)
-            Return dt
+            If Not Me.IsNetCore Then
+                Dim secondsSince1970 As Integer = Me.PeHeader.CoffHeader.TimeDateStamp
+                Dim dt As DateTimeOffset = (New DateTimeOffset(1970, 1, 1, 0, 0, 0, DateTimeOffset.Now.Offset) + DateTimeOffset.Now.Offset)
+                dt = dt.AddSeconds(secondsSince1970)
+                Return dt
+            Else
+            End If
         End Get
     End Property
 
@@ -448,7 +455,7 @@ Public NotInheritable Class AssemblyInfo
     ''' The assembly file path.
     ''' </param>
     ''' ----------------------------------------------------------------------------------------------------
-    Public Sub New(ByVal filepath As String)
+    Public Sub New(filepath As String)
         Me.filepath = filepath
 
         Dim rawAssembly As Byte() = File.ReadAllBytes(filepath)
@@ -470,10 +477,11 @@ Public NotInheritable Class AssemblyInfo
 
         End Try
 
+        Me.IsNetCore = Me.IsNetCoreAssembly(Me.assembly)
+
         Me.MD5Hash = Me.ComputeHashOfData(Of MD5CryptoServiceProvider)(rawAssembly)
         Me.SHA1Hash = Me.ComputeHashOfData(Of SHA1CryptoServiceProvider)(rawAssembly)
         Me.SHA256Hash = Me.ComputeHashOfData(Of SHA256CryptoServiceProvider)(rawAssembly)
-        rawAssembly = Nothing
 
         Me.AssemblyName = Me.assembly.GetName()
         Me.FileVersionInfo = FileVersionInfo.GetVersionInfo(filepath)
@@ -482,6 +490,33 @@ Public NotInheritable Class AssemblyInfo
 #End Region
 
 #Region " Private Methods "
+
+    ''' ----------------------------------------------------------------------------------------------------
+    ''' <summary>
+    ''' Determines whether the specified assembly ia a .NET Core assembly.
+    ''' </summary>
+    ''' ----------------------------------------------------------------------------------------------------
+    ''' <returns>
+    ''' <see langword="True"/> if the specified assembly ia a .NET Core assembly; otherwise, <see langword="False"/>.
+    ''' </returns>
+    ''' ----------------------------------------------------------------------------------------------------
+    <DebuggerStepThrough>
+    Private Function IsNetCoreAssembly(assembly As Assembly) As Boolean
+
+        Dim assemblyNames As String() = {
+            "System.Collections",
+            "System.Windows.Forms",
+            "System.ComponentModel.Prmitives",
+            "System.Drawing.Prmitives"
+        }
+
+        Return Me.assembly.GetReferencedAssemblies().Any(
+            Function(x)
+                Return (assemblyNames.Contains(x.Name) AndAlso x.Version.Major >= 5) OrElse
+                       (x.Name.Equals("System.Runtime") AndAlso x.Version.Major >= 4 AndAlso x.Version.Minor > 0)
+            End Function)
+
+    End Function
 
     ''' ----------------------------------------------------------------------------------------------------
     ''' <summary>
@@ -635,7 +670,7 @@ Public NotInheritable Class AssemblyInfo
     ''' </returns>
     ''' ----------------------------------------------------------------------------------------------------
     <DebuggerStepThrough>
-    Private Function ComputeHashOfData(Of T As HashAlgorithm)(ByVal data As Byte()) As String
+    Private Function ComputeHashOfData(Of T As HashAlgorithm)(data As Byte()) As String
 
         Using algorithm As HashAlgorithm = DirectCast(Activator.CreateInstance(GetType(T)), HashAlgorithm)
 

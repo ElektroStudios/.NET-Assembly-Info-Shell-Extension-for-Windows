@@ -68,8 +68,8 @@ Namespace ElektroKit.Interop.Unmanaged.Win32.Interfaces
         ''' </returns>
         ''' ----------------------------------------------------------------------------------------------------
         <PreserveSig>
-        Function QueryAssemblyInfo(ByVal flags As QueryAssemblyInfoFlags,
- <MarshalAs(UnmanagedType.LPWStr)> ByVal assemblyName As String,
+        Function QueryAssemblyInfo(flags As QueryAssemblyInfoFlags,
+ <MarshalAs(UnmanagedType.LPWStr)> assemblyName As String,
                                    ByRef refAssemblyInfo As NativeAssemblyInfo
         ) As Integer
 
