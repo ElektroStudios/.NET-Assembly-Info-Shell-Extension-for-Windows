@@ -21,7 +21,7 @@ winforms
 ------------------
 
  <div align="center">
-  <img src="/Images/App.ico" width="100" alt="Logo">
+  <img src="/Images/App.ico" width="50" alt="Logo">
   
   <h1>.NET Assembly Info Shell-Extension for Windows</h1>
 
@@ -59,6 +59,21 @@ winforms
 </p>
 
 ------------------
+
+## 👋 Introduction
+
+**.NET Assembly Info Shell-Extension for Windows** is a shell extension designed to seamlessly integrate into the Windows File Explorer. It enhances the standard Windows file properties dialog by adding a dedicated, data-rich "**AssemblyInfo**" tab whenever a `.dll` or `.exe` file compiled under .NET Framework or .NET Core is inspected. 
+
+This extension extracts deep metadata, build architectures, security attributes, and identity signatures directly from the assembly's manifest, rendering a comprehensive diagnostic report right inside the OS user interface without requiring heavy external decompilers or development environments.
+
+## 💡 Motivation
+
+For developers, reverse engineers, and system administrators, inspecting .NET assemblies on the fly has historically required launching standalone utilities such as ILSpy, dnSpy, or the traditional `ildasm`. While powerful, these tools introduce unnecessary friction into everyday asset management, quick deployments, and troubleshooting pipelines. 
+
+Windows native property sheets inherently fail to distinguish between standard Win32 PE files and managed .NET binaries, hiding critical framework-specific telemetry. This tool was created to bridge that gap permanently—bringing binary inspection directly to the context menu, saving time, and streamlining deployment auditing with a clean, exportable interface.
+
+##### ⚡ The Real Question
+###### Why waste time opening specialized standalone decompilers or complex IDEs just to verify a target framework, platform architecture, public key token, or compilation timestamp, when you can gather all that critical metadata instantly with a single native right-click?
 
 ## 🖼️ Screenshots
 
