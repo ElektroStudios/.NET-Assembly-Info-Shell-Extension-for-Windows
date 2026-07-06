@@ -24,8 +24,12 @@ configuration: Release
 install:
   - >-
     choco install chocolatey-dotnetfx.extension --no-progress -y
-  - >-
-    choco install netfx-4.8.1-devpack --ignore-dependencies --no-progress -y
+  - ps: >-
+      if (-not (Test-Path "C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.8.1")) {
+        choco install netfx-4.8.1-devpack --no-progress -y
+      } else {
+        Write-Host ".NET Framework 4.8.1 Developer Pack already installed."
+      }
   - >-
     git submodule update --init --recursive
 before_build:
