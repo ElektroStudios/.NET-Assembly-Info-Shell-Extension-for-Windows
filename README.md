@@ -72,9 +72,14 @@ winforms
 
 - Microsoft Windows OS.
 
-## 🤖 Getting Started
+## 🚀 Getting Started
 
-Download the latest release by clicking [here](https://github.com/ElektroStudios/.NET-Assembly-Info-Shell-Extension-for-Windows/releases/latest).
+1. Navigate to the **[Releases page](https://github.com/ElektroStudios/.NET-Assembly-Info-Shell-Extension-for-Windows/releases/latest)**.
+2. Download the latest `.zip` archive or the `.exe` setup installer, depending on your preference.
+3. If you downloaded the `.zip` archive, extract its contents to your preferred directory.
+   <br> 
+   If you downloaded the `.exe` file, run it and follow the installation wizard.
+4. Run the executable file to launch the application.
 
 After you have installed the shell-extension, do right click on a .dll or .exe file (that is built with .NET Framework or .NET Core) to show the file menu,  click on the "Properties" option, and finally you will see a tab with name "AssemblyInfo" (see the 'Screenshots' section of this README).
 

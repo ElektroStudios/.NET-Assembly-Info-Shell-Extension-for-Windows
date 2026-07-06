@@ -2,7 +2,7 @@
 # CUSTOMIZABLE TEMPLATE REPOSITORY VARIABLES
 # 
 environment:
-  APP_DIR_NAME: "net-assembly-info-shell-extension-for-windows"
+  APP_DIR_NAME: "NET Assembly Info ShellEx"
   SOLUTION_EXT: "sln"
 # ------------------------------------------
 
