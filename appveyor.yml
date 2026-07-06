@@ -22,9 +22,14 @@ skip_commits:
 image: Visual Studio 2026
 configuration: Release
 install:
-  - ps: Invoke-WebRequest -Uri "https://download.visualstudio.microsoft.com/download/pr/6f083c7e-bd40-44d4-9e3f-ffba71ec8b09/9ba926620d8e7568cbd0b84c7177a984/ndp481-devpack-enu.exe" -OutFile "$env:TEMP\ndp481-devpack.exe"
-  - cmd: '"%TEMP%\ndp481-devpack.exe" /q /norestart'
-  - cmd: git submodule update --init --recursive
+  - >-
+    choco install chocolatey-dotnetfx.extension --no-progress -y
+  - ps: >-
+      if (-not (Test-Path "C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.8.1")) {
+        choco install netfx-4.8.1-devpack --ignore-dependencies --no-progress -y
+      } else {
+        Write-Host ".NET Framework 4.8.1 Developer Pack ya presente en la imagen, saltando instalacion."
+      }
   - >-
     git submodule update --init --recursive
 before_build:
