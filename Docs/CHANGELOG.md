@@ -1,4 +1,4 @@
-# .NET Assembly Info Shell-Extension Change Log 📋
+﻿# .NET Assembly Info Shell-Extension Change Log 📋
 
 ## v1.1 *(current)* 🆕
 #### 🚀 New Features:

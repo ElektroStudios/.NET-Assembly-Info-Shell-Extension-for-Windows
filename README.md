@@ -1,4 +1,4 @@
-<!-- Common Project Tags:
+﻿<!-- Common Project Tags:
 desktop-app 
 desktop-application 
 dotnet 
@@ -143,13 +143,6 @@ From the tab with name "AssemblyInfo", you can get see the information that this
 
 Explore the complete list of changes, bug fixes, and improvements across different releases by clicking [here](/Docs/CHANGELOG.md).
 
-## 🏆 Credits
-
-This work relies on the following technologies, libraries or resources: 
-
- - [.NET Framework](https://dotnet.microsoft.com/en-us/download/dotnet-framework)
- - [SharpShell](https://github.com/dwmkerr/sharpshell)
-
 ## 💪 Contributing
 
 Your contribution is highly appreciated!. If you have any ideas, suggestions, or encounter issues, feel free to open an issue by clicking [here](https://github.com/ElektroStudios/.NET-Assembly-Info-Shell-Extension-for-Windows/issues/new/choose). 
@@ -172,6 +165,13 @@ This work is distributed for educational purposes and without any profit motive.
 </div>
 
 ------------------
+
+## 🏆 Credits
+
+This work relies on the following technologies, libraries or resources: 
+
+ - [.NET Framework](https://dotnet.microsoft.com/en-us/download/dotnet-framework)
+ - [SharpShell](https://github.com/dwmkerr/sharpshell)
 
 ## ⚠️ Disclaimer
 

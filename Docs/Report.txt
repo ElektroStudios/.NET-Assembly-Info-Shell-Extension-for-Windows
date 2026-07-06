@@ -1,4 +1,4 @@
-C:\WinExe (AnyCPU, Prefer 32-Bit).exe
+﻿C:\WinExe (AnyCPU, Prefer 32-Bit).exe
 
 Product
 -------
@@ -7,7 +7,7 @@ Original Name      : WinForms Test Assembly.exe
 Product Name       : WinForms Test Assembly (Any CPU)
 Product Description: WinForms Test Assembly
 Company Name       : ElektroStudios
-Copyright          : Copyright � Elektro Studios 2018
+Copyright          : Copyright © Elektro Studios 2018
 File Version       : 1.1.0.0
 Product Version    : 1.0.0.0
 Language           : English (United States) (en-US)
