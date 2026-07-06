@@ -62,9 +62,9 @@ winforms
 
 ## 🖼️ Screenshots
 
-![](/Images/Tab1-Product.png) ![](/Images/Tab2-Build.png)
+<img src="/Images/Tab1-Product.png" width="48%"> <img src="/Images/Tab2-Build.png" width="48%">
 
-![](/Images/Tab3-Identity.png)
+<img src="/Images/Tab3-Identity.png" width="48%">
 
 ## 📝 Requirements
 
