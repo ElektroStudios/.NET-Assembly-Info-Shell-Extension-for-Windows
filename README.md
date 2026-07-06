@@ -62,9 +62,7 @@ winforms
 
 ## 🖼️ Screenshots
 
-![](/Images/Tab1-Product.png)
-
-![](/Images/Tab2-Build.png)
+![](/Images/Tab1-Product.png) ![](/Images/Tab2-Build.png)
 
 ![](/Images/Tab3-Identity.png)
 
@@ -79,7 +77,6 @@ winforms
 3. If you downloaded the `.zip` archive, extract its contents to your preferred directory.
    <br> 
    If you downloaded the `.exe` file, run it and follow the installation wizard.
-4. Run the executable file to launch the application.
 
 After you have installed the shell-extension, do right click on a .dll or .exe file (that is built with .NET Framework or .NET Core) to show the file menu,  click on the "Properties" option, and finally you will see a tab with name "AssemblyInfo" (see the 'Screenshots' section of this README).
 
