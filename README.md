@@ -47,7 +47,7 @@ winforms
     <a href="https://learn.microsoft.com/en-us/windows/apps/"><img src="https://img.shields.io/badge/platform-Windows-lightgray.svg" alt="Platform"></a>
     <a href="LICENSE"><img src="https://img.shields.io/github/license/ElektroStudios/.NET-Assembly-Info-Shell-Extension-for-Windows" alt="License"></a>
   <br>
-    <a href="https://github.com/ElektroStudios/.NET-Assembly-Info-Shell-Extension-for-Windows/archive/head.zip"><img src="https://img.shields.io/github/repo-size/ElektroStudios/.NET-Assembly-Info-Shell-Extension-for-Windows" alt="Repo size"></a>
+    <a href="https://github.com/ElektroStudios/.NET-Assembly-Info-Shell-Extension-for-Windows/archive/HEAD.zip"><img src="https://img.shields.io/github/repo-size/ElektroStudios/.NET-Assembly-Info-Shell-Extension-for-Windows" alt="Repo size"></a>
     <a href="https://somsubhra.github.io/github-release-stats/?username=ElektroStudios&repository=.NET-Assembly-Info-Shell-Extension-for-Windows"><img src="https://img.shields.io/github/downloads/ElektroStudios/.NET-Assembly-Info-Shell-Extension-for-Windows/total.svg?label=total%20downloads" alt="Total Downloads"></a>
     <a href="https://github.com/ElektroStudios/.NET-Assembly-Info-Shell-Extension-for-Windows/commits"><img src="https://img.shields.io/github/last-commit/ElektroStudios/.NET-Assembly-Info-Shell-Extension-for-Windows" alt="Last commit"></a>
     <a href="https://github.com/ElektroStudios/.NET-Assembly-Info-Shell-Extension-for-Windows/pulls"><img src="https://img.shields.io/github/issues-pr/ElektroStudios/.NET-Assembly-Info-Shell-Extension-for-Windows" alt="Pull Requests"></a>
