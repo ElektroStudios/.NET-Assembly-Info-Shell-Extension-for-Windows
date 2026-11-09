@@ -10,16 +10,13 @@ Option Infer Off
 
 Namespace ElektroKit.Interop.Unmanaged.Win32.Enums
 
-    ''' ----------------------------------------------------------------------------------------------------
     ''' <summary>
     ''' Flags combination for <c>flags</c> parameter of 
     ''' <see cref="Interfaces.IAssemblyCache.QueryAssemblyInfo"/> function.
     ''' </summary>
-    ''' ----------------------------------------------------------------------------------------------------
     ''' <remarks>
     ''' <see href="https://msdn.microsoft.com/en-us/library/ms230114(v=vs.110).aspx"/>
     ''' </remarks>
-    ''' ----------------------------------------------------------------------------------------------------
     <Flags>
     Public Enum QueryAssemblyInfoFlags As Integer
 

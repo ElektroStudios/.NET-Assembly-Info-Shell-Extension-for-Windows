@@ -9,112 +9,63 @@ Option Infer Off
 
 #Region " Imports "
 
-Imports System.Globalization
+Imports System.Collections.ObjectModel
+Imports System.ComponentModel
 Imports System.IO
 Imports System.Text
 Imports System.Windows.Forms
 
-Imports Usercontrols
+Imports AssemblyInspection
 Imports SharpShell.SharpPropertySheet
+Imports Usercontrols
 
 #End Region
 
 #Region " PropertyPage "
 
-''' ----------------------------------------------------------------------------------------------------
 ''' <summary>
 ''' The .NET Assembly Info property page.
 ''' </summary>
-''' ----------------------------------------------------------------------------------------------------
 Partial Public Class PropertyPage : Inherits SharpPropertyPage
+
+#Region " Constants "
+
+    ''' <summary>
+    ''' The minimum width, in pixels, of the list view columns after auto-sizing them.
+    ''' </summary>
+    Private Const MinimumColumnWidth As Integer = 120
+
+#End Region
 
 #Region " Private Fields "
 
-    ''' ----------------------------------------------------------------------------------------------------
     ''' <summary>
     ''' The source assembly file path.
     ''' </summary>
-    ''' ----------------------------------------------------------------------------------------------------
     Private filePath As String
 
-    ''' ----------------------------------------------------------------------------------------------------
     ''' <summary>
-    ''' The source AssemblyInfo.
+    ''' The property groups shown in the list views, in tab order.
     ''' </summary>
-    ''' ----------------------------------------------------------------------------------------------------
-    Private asmInfo As AssemblyInfo
+    Private groups As ReadOnlyCollection(Of PropertyGroup)
 
-    ''' ----------------------------------------------------------------------------------------------------
+    ''' <summary>
+    ''' The list views, in tab order (Product, Build, Identity, References).
+    ''' </summary>
+    Private ReadOnly listViews As ListView()
+
     ''' <summary>
     ''' Keep track of the current shown ListView to perform copy operations from the context menu.
     ''' </summary>
-    ''' ----------------------------------------------------------------------------------------------------
     Private currentListView As ListView
-
-    ''' ----------------------------------------------------------------------------------------------------
-    ''' <summary>
-    ''' A dictionary that holds all the list-view items to be added into the <see cref="PropertyPage.ListViewProduct"/> control.
-    ''' </summary>
-    ''' ----------------------------------------------------------------------------------------------------
-    Private ReadOnly lvItemsProductDict As New Dictionary(Of String, ListViewItem)(9, StringComparer.OrdinalIgnoreCase) From {
-            {"File Name", New ListViewItem("File Name")},
-            {"Original Name", New ListViewItem("Original Name")},
-            {"Product Name", New ListViewItem("Product Name")},
-            {"Product Description", New ListViewItem("Product Description")},
-            {"Company Name", New ListViewItem("Company Name")},
-            {"Copyright", New ListViewItem("Copyright")},
-            {"File Version", New ListViewItem("File Version")},
-            {"Product Version", New ListViewItem("Product Version")},
-            {"Language", New ListViewItem("Language")}
-        }
-
-    ''' ----------------------------------------------------------------------------------------------------
-    ''' <summary>
-    ''' A dictionary that holds all the list-view items to be added into the <see cref="PropertyPage.ListViewBuild"/> control.
-    ''' </summary>
-    ''' ----------------------------------------------------------------------------------------------------
-    Private ReadOnly lvItemsBuildDict As New Dictionary(Of String, ListViewItem)(18, StringComparer.OrdinalIgnoreCase) From {
-            {"PE File Kind", New ListViewItem("PE File Kind")},
-            {"Platform", New ListViewItem("Platform")},
-            {"Build Configuration", New ListViewItem("Build Configuration")},
-            {"CLR Version", New ListViewItem("CLR Version")},
-            {"Target .NET Framework", New ListViewItem("Target .NET Framework")},
-            {"Entry-Point Address", New ListViewItem("Entry-Point Address")},
-            {"Root Namespace", New ListViewItem("Root Namespace")},
-            {"Is Strong-Name Signed", New ListViewItem("Is Strong-Name Signed")},
-            {"Public Key Token", New ListViewItem("Public Key Token")},
-            {"Security Permission", New ListViewItem("Security Permission")},
-            {"Dll Import Search Paths", New ListViewItem("Dll Import Search Paths")},
-            {"Is CLS Compliant", New ListViewItem("Is CLS Compliant")},
-            {"Is COM Visible", New ListViewItem("Is COM Visible")},
-            {"Is DPI Awareness Disabled", New ListViewItem("Is DPI Awareness Disabled")},
-            {"Is Installed in GAC", New ListViewItem("Is Installed in GAC")},
-            {"GAC Name", New ListViewItem("GAC Name")},
-            {"GAC Path", New ListViewItem("GAC Path")}
-        }
-
-    ''' ----------------------------------------------------------------------------------------------------
-    ''' <summary>
-    ''' A dictionary that holds all the list-view items to be added into the <see cref="PropertyPage.ListViewIdentity"/> control.
-    ''' </summary>
-    ''' ----------------------------------------------------------------------------------------------------
-    Private ReadOnly lvItemsIdentityDict As New Dictionary(Of String, ListViewItem)(4, StringComparer.OrdinalIgnoreCase) From {
-            {"Assembly GUID", New ListViewItem("Assembly GUID")},
-            {"Compilation TimeStamp", New ListViewItem("Compilation TimeStamp")},
-            {"MD5 Hash", New ListViewItem("MD5 Hash")},
-            {"SHA-1 Hash", New ListViewItem("SHA-1 Hash")},
-            {"SHA-256 Hash", New ListViewItem("SHA-256 Hash")}
-        }
 
 #End Region
 
 #Region " Constructors "
 
-    ''' ----------------------------------------------------------------------------------------------------
     ''' <summary>
     ''' Initializes a new instance of the <see cref="PropertyPage"/> class.
     ''' </summary>
-    ''' ----------------------------------------------------------------------------------------------------
     Public Sub New()
         MyClass.InitializeComponent()
 
@@ -122,16 +73,8 @@ Partial Public Class PropertyPage : Inherits SharpPropertyPage
         Me.PageTitle = Me.Name
         Me.PageIcon = My.Resources.VisualStudio
 
+        Me.listViews = {Me.ListViewProduct, Me.ListViewBuild, Me.ListViewIdentity, Me.ListViewReferences}
         Me.currentListView = Me.TabControlListViews.TabPages(0).Controls.OfType(Of ListView).Single()
-
-        Me.ListViewProduct.Text = "Product"
-        Me.ListViewProduct.Tag = Me.lvItemsProductDict
-
-        Me.ListViewBuild.Text = "Build"
-        Me.ListViewBuild.Tag = Me.lvItemsBuildDict
-
-        Me.ListViewIdentity.Text = "Identity"
-        Me.ListViewIdentity.Tag = Me.lvItemsIdentityDict
 
 #If DEBUG Then
         Me.filePath = "C:\File.dll"
@@ -150,15 +93,12 @@ Partial Public Class PropertyPage : Inherits SharpPropertyPage
 
 #Region " Event Invocators "
 
-    ''' ----------------------------------------------------------------------------------------------------
     ''' <summary>
     ''' Called when the property page is initialised.
     ''' </summary>
-    ''' ----------------------------------------------------------------------------------------------------
     ''' <param name="e">
     ''' The parent property sheet.
     ''' </param>
-    ''' ----------------------------------------------------------------------------------------------------
     Protected Overrides Sub OnPropertyPageInitialised(e As SharpPropertySheet)
         Me.filePath = e.SelectedItemPaths.Single()
 
@@ -172,19 +112,16 @@ Partial Public Class PropertyPage : Inherits SharpPropertyPage
 
 #Region " Event Handlers "
 
-    ''' ----------------------------------------------------------------------------------------------------
     ''' <summary>
     ''' Handles the <see cref="TabControl.SelectedIndexChanged"/> event of the <see cref="PropertyPage.TabControlListViews"/> control.
     ''' </summary>
-    ''' ----------------------------------------------------------------------------------------------------
     ''' <param name="sender">
     ''' The source of the event.
     ''' </param>
-    ''' ----------------------------------------------------------------------------------------------------
+    '''
     ''' <param name="e">
     ''' The <see cref="EventArgs"/> instance containing the event data.
     ''' </param>
-    ''' ----------------------------------------------------------------------------------------------------
     Private Sub TabControlListViews_SelectedIndexChanged(sender As Object, e As EventArgs) Handles TabControlListViews.SelectedIndexChanged
 
         Me.currentListView = DirectCast(sender, TabControlFix).SelectedTab.Controls.OfType(Of ListView).Single()
@@ -192,41 +129,74 @@ Partial Public Class PropertyPage : Inherits SharpPropertyPage
 
     End Sub
 
-    ''' ----------------------------------------------------------------------------------------------------
     ''' <summary>
-    ''' Handles the <see cref="ToolStripMenuItem.Click"/> event of the <see cref="PropertyPage.CopyToolStripMenuItem"/> control.
+    ''' Handles the <see cref="ContextMenuStrip.Opening"/> event of the <see cref="PropertyPage.ContextMenuStripListView"/> control.
     ''' </summary>
-    ''' ----------------------------------------------------------------------------------------------------
     ''' <param name="sender">
     ''' The source of the event.
     ''' </param>
-    ''' ----------------------------------------------------------------------------------------------------
+    '''
     ''' <param name="e">
-    ''' The <see cref="EventArgs"/> instance containing the event data.
+    ''' The <see cref="CancelEventArgs"/> instance containing the event data.
     ''' </param>
-    ''' ----------------------------------------------------------------------------------------------------
-    Private Sub CopyToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles CopyToolStripMenuItem.Click
+    Private Sub ContextMenuStripListView_Opening(sender As Object, e As CancelEventArgs) Handles ContextMenuStripListView.Opening
 
-        Dim str As String = String.Format("{0}: {1}", Me.currentListView.SelectedItems(0).SubItems(0).Text,
-                                                      Me.currentListView.SelectedItems(0).SubItems(1).Text)
-
-        Clipboard.SetText(str)
+        ' Nothing to copy when the user right-clicks on an empty area of the list view.
+        e.Cancel = (Me.currentListView Is Nothing) OrElse (Me.currentListView.SelectedItems.Count = 0)
 
     End Sub
 
-    ''' ----------------------------------------------------------------------------------------------------
     ''' <summary>
-    ''' Handles the <see cref="Button.Click"/> event of the <see cref="PropertyPage.ButtonSave"/> control.
+    ''' Handles the <see cref="ToolStripMenuItem.Click"/> event of the <see cref="PropertyPage.CopyToolStripMenuItem"/> control.
     ''' </summary>
-    ''' ----------------------------------------------------------------------------------------------------
     ''' <param name="sender">
     ''' The source of the event.
     ''' </param>
-    ''' ----------------------------------------------------------------------------------------------------
+    '''
     ''' <param name="e">
     ''' The <see cref="EventArgs"/> instance containing the event data.
     ''' </param>
-    ''' ----------------------------------------------------------------------------------------------------
+    Private Sub CopyToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles CopyToolStripMenuItem.Click
+
+        Dim item As ListViewItem = Me.GetSelectedItem()
+        Clipboard.SetText($"{item.SubItems(0).Text}: {item.SubItems(1).Text}")
+
+    End Sub
+
+    ''' <summary>
+    ''' Handles the <see cref="ToolStripMenuItem.Click"/> event of the <see cref="PropertyPage.CopyValueToolStripMenuItem"/> control.
+    ''' </summary>
+    ''' <param name="sender">
+    ''' The source of the event.
+    ''' </param>
+    '''
+    ''' <param name="e">
+    ''' The <see cref="EventArgs"/> instance containing the event data.
+    ''' </param>
+    Private Sub CopyValueToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles CopyValueToolStripMenuItem.Click
+
+        Dim item As ListViewItem = Me.GetSelectedItem()
+        Dim value As String = item.SubItems(1).Text
+
+        ' Clipboard.SetText throws ArgumentNullException for empty strings.
+        If value.Length = 0 Then
+            Clipboard.Clear()
+        Else
+            Clipboard.SetText(value)
+        End If
+
+    End Sub
+
+    ''' <summary>
+    ''' Handles the <see cref="Button.Click"/> event of the <see cref="PropertyPage.ButtonSave"/> control.
+    ''' </summary>
+    ''' <param name="sender">
+    ''' The source of the event.
+    ''' </param>
+    '''
+    ''' <param name="e">
+    ''' The <see cref="EventArgs"/> instance containing the event data.
+    ''' </param>
     Private Sub ButtonSave_Click(sender As Object, e As EventArgs) Handles ButtonSave.Click
 
         Using sfd As New SaveFileDialog() With {
@@ -234,7 +204,7 @@ Partial Public Class PropertyPage : Inherits SharpPropertyPage
             .CheckPathExists = True,
             .CreatePrompt = False,
             .DefaultExt = "txt",
-            .FileName = String.Format("{0}.{1}", Path.GetFileName(Me.filePath), .DefaultExt),
+            .FileName = $"{Path.GetFileName(Me.filePath)}.txt",
             .Filter = "All files (*.*)|*.*|txt files (*.txt)|*.txt",
             .FilterIndex = 2,
             .OverwritePrompt = True,
@@ -245,7 +215,7 @@ Partial Public Class PropertyPage : Inherits SharpPropertyPage
             .ValidateNames = True
         }
 
-            If (sfd.ShowDialog = DialogResult.OK) Then
+            If (sfd.ShowDialog(Me) = DialogResult.OK) Then
                 Me.SaveAsTextFile(sfd.FileName)
             End If
         End Using
@@ -256,216 +226,101 @@ Partial Public Class PropertyPage : Inherits SharpPropertyPage
 
 #Region " Private Methods "
 
-    ''' ----------------------------------------------------------------------------------------------------
     ''' <summary>
-    ''' Loads the assembly information into the listview items.
+    ''' Reads the assembly information and builds the property groups shown in the list views.
+    ''' <para></para>
+    ''' If the file cannot be read, the error is shown in the first tab instead of crashing the property sheet.
     ''' </summary>
-    ''' ----------------------------------------------------------------------------------------------------
     Private Sub LoadAssemblyInfo()
 
-        asmInfo = New AssemblyInfo(Me.filePath)
+        Try
+            Dim info As New AssemblyInfo(Me.filePath)
+            Me.groups = AssemblyInfoPresenter.CreateGroups(info, TimeZoneInfo.Local)
 
-        ' ListViewProduct Items
+        Catch ex As Exception When (TypeOf ex Is BadImageFormatException) OrElse
+                                   (TypeOf ex Is IOException) OrElse
+                                   (TypeOf ex Is UnauthorizedAccessException) OrElse
+                                   (TypeOf ex Is NotSupportedException)
+            Me.groups = AssemblyInfoPresenter.CreateErrorGroups(Me.filePath, ex)
 
-        Me.lvItemsProductDict("File Name").SubItems.Add(
-            Path.GetFileName(Me.filePath))
+        End Try
 
-        Me.lvItemsProductDict("Original Name").SubItems.Add(
-            If(Not String.IsNullOrEmpty(asmInfo.FileVersionInfo.OriginalFilename),
-                                        asmInfo.FileVersionInfo.OriginalFilename, "(null)"))
+        If Me.groups.Count <> Me.listViews.Length Then
+            Throw New InvalidOperationException($"Expected {Me.listViews.Length} property groups, but got {Me.groups.Count}.")
+        End If
 
-        Me.lvItemsProductDict("Product Name").SubItems.Add(
-            If(Not String.IsNullOrEmpty(asmInfo.FileVersionInfo.ProductName),
-                                        asmInfo.FileVersionInfo.ProductName, "(null)"))
-
-        Me.lvItemsProductDict("Product Description").SubItems.Add(
-            If(Not String.IsNullOrEmpty(asmInfo.FileVersionInfo.FileDescription),
-                                        asmInfo.FileVersionInfo.FileDescription, "(null)"))
-
-        Me.lvItemsProductDict("Company Name").SubItems.Add(
-            If(Not String.IsNullOrEmpty(asmInfo.FileVersionInfo.CompanyName),
-                                        asmInfo.FileVersionInfo.CompanyName, "(null)"))
-
-        Me.lvItemsProductDict("Copyright").SubItems.Add(
-            If(Not String.IsNullOrEmpty(asmInfo.FileVersionInfo.LegalCopyright),
-                                        asmInfo.FileVersionInfo.LegalCopyright, "(null)"))
-
-        Me.lvItemsProductDict("File Version").SubItems.Add(
-            asmInfo.AssemblyName.Version.ToString())
-
-        Me.lvItemsProductDict("Product Version").SubItems.Add(
-            asmInfo.FileVersionInfo.ProductVersion)
-
-        Me.lvItemsProductDict("Language").SubItems.Add(
-            If(asmInfo.DefaultCulture IsNot Nothing,
-              String.Format("{0} ({1})", asmInfo.DefaultCulture.EnglishName, asmInfo.DefaultCulture.Name), "(null)"))
-
-        ' ListViewBuild Items
-        Me.lvItemsBuildDict("PE File Kind").SubItems.Add(
-            asmInfo.PeFileKind)
-
-        Me.lvItemsBuildDict("Platform").SubItems.Add(
-            asmInfo.Platform)
-
-        Me.lvItemsBuildDict("Build Configuration").SubItems.Add(
-            If(asmInfo.FileVersionInfo.IsDebug, "Debug", "Release"))
-
-        Me.lvItemsBuildDict("CLR Version").SubItems.Add(asmInfo.ClrVersion)
-
-        Me.lvItemsBuildDict("Target .NET Framework").SubItems.Add(
-            If(asmInfo.TargetNetFrameworkVersion IsNot Nothing,
-               asmInfo.TargetNetFrameworkVersion.ToString(), "(null)"))
-
-        Me.lvItemsBuildDict("Entry-Point Address").SubItems.Add(
-            String.Format("0x{0}", asmInfo.EntryPointAddress.ToString("X2")))
-
-        Me.lvItemsBuildDict("Root Namespace").SubItems.Add(
-            If(Not String.IsNullOrEmpty(asmInfo.RootNamespace.NamespaceName),
-                                        asmInfo.RootNamespace.NamespaceName, "(null)"))
-
-        Me.lvItemsBuildDict("Is Strong-Name Signed").SubItems.Add(
-            If(asmInfo.IsStrongNameSigned, "Yes", "No"))
-
-        Me.lvItemsBuildDict("Public Key Token").SubItems.Add(
-            If(Not String.IsNullOrEmpty(asmInfo.PublicKeyToken),
-                                        asmInfo.PublicKeyToken.ToUpper(), "(null)"))
-
-        Me.lvItemsBuildDict("Is DPI Awareness Disabled").SubItems.Add(
-            If(asmInfo.IsDpiAwarenessDisabled, "Yes", "No"))
-
-        Me.lvItemsBuildDict("Dll Import Search Paths").SubItems.Add(
-            If(asmInfo.DefaultDllImportSearchPaths <> Nothing,
-               asmInfo.DefaultDllImportSearchPaths.ToString(), "(default)"))
-
-        Me.lvItemsBuildDict("Is CLS Compliant").SubItems.Add(
-            If(asmInfo.IsClsCompliant, "Yes", "No"))
-
-        Me.lvItemsBuildDict("Is COM Visible").SubItems.Add(
-            If(asmInfo.IsCOMVisible, "Yes", "No"))
-
-        Me.lvItemsBuildDict("Security Permission").SubItems.Add(
-            If(asmInfo.SecurityPermission IsNot Nothing,
-               asmInfo.SecurityPermission.Action.ToString(), "(null)"))
-
-        Me.lvItemsBuildDict("Is Installed in GAC").SubItems.Add(
-            If(asmInfo.IsInstalledInGAC, "Yes", "No"))
-
-        Me.lvItemsBuildDict("GAC Name").SubItems.Add(
-            If(Not String.IsNullOrEmpty(asmInfo.GacFullName),
-                                        asmInfo.GacFullName, "(null)"))
-
-        Me.lvItemsBuildDict("GAC Path").SubItems.Add(
-            If(Not String.IsNullOrEmpty(asmInfo.GacPath),
-                                        asmInfo.GacPath, "(null)"))
-
-
-        ' ListViewIdentity Items
-
-        Me.lvItemsIdentityDict("Assembly GUID").SubItems.Add(
-            If(asmInfo.Guid <> Nothing,
-               asmInfo.Guid.ToString().ToUpper(), "(null)"))
-
-        Me.lvItemsIdentityDict("Compilation TimeStamp").SubItems.Add(
-            asmInfo.TimeStamp.ToString("dd/MMMM/yyyy HH:mm:ss", CultureInfo.InvariantCulture))
-
-        Me.lvItemsIdentityDict("MD5 Hash").SubItems.Add(
-            asmInfo.MD5Hash)
-
-        Me.lvItemsIdentityDict("SHA-1 Hash").SubItems.Add(
-            asmInfo.SHA1Hash)
-
-        Me.lvItemsIdentityDict("SHA-256 Hash").SubItems.Add(
-            asmInfo.SHA256Hash)
+        For i As Integer = 0 To Me.listViews.Length - 1
+            Me.listViews(i).Tag = Me.groups(i)
+        Next i
 
     End Sub
 
-    ''' ----------------------------------------------------------------------------------------------------
     ''' <summary>
-    ''' Loads the listview items.
+    ''' Loads the rows of the property group associated to the specified list view.
     ''' </summary>
-    ''' ----------------------------------------------------------------------------------------------------
-    ''' <param name="addNullValues">
-    ''' If <see langword="True"/>, also adds "(null)" values to the List View.
+    ''' <param name="lv">
+    ''' The list view.
     ''' </param>
-    ''' ----------------------------------------------------------------------------------------------------
     Private Sub LoadListViewItems(lv As ListView)
 
-        Dim dict As Dictionary(Of String, ListViewItem) = DirectCast(lv.Tag, Dictionary(Of String, ListViewItem))
+        Dim group As PropertyGroup = TryCast(lv.Tag, PropertyGroup)
+        If group Is Nothing Then
+            Throw New InvalidOperationException($"The list view '{lv.Name}' has no property group assigned.")
+        End If
 
         lv.BeginUpdate()
         lv.Items.Clear()
 
-        For Each lvItem As ListViewItem In dict.Values
-            If asmInfo.IsNetCore Then
-                Select Case lvItem.Text
-                    Case Me.lvItemsProductDict("Language").Text,
-                         Me.lvItemsIdentityDict("Assembly GUID").Text,
-                         Me.lvItemsIdentityDict("Compilation TimeStamp").Text,
-                         Me.lvItemsBuildDict("Is DPI Awareness Disabled").Text,
-                         Me.lvItemsBuildDict("Dll Import Search Paths").Text,
-                         Me.lvItemsBuildDict("Is CLS Compliant").Text,
-                         Me.lvItemsBuildDict("Is COM Visible").Text,
-                         Me.lvItemsBuildDict("Security Permission").Text,
-                         Me.lvItemsBuildDict("Is Installed in GAC").Text,
-                         Me.lvItemsBuildDict("GAC Name").Text,
-                         Me.lvItemsBuildDict("GAC Path").Text,
-                         Me.lvItemsBuildDict("Target .NET Framework").Text
+        For Each row As PropertyRow In group.Rows
+            lv.Items.Add(New ListViewItem({row.Name, row.Value}))
+        Next row
 
-                        ' IGNORE, values can't be retrieved for .NET Core assembly.
-
-                    Case Else
-                        lv.Items.Add(lvItem)
-
-                End Select
-
-            Else
-                lv.Items.Add(lvItem)
-
+        ' Fit both columns to their content, so long values (hashes, paths) can be read by scrolling horizontally.
+        For Each column As ColumnHeader In lv.Columns
+            column.AutoResize(ColumnHeaderAutoResizeStyle.ColumnContent)
+            If column.Width < PropertyPage.MinimumColumnWidth Then
+                column.Width = PropertyPage.MinimumColumnWidth
             End If
-
-        Next lvItem
+        Next column
 
         lv.EndUpdate()
 
     End Sub
 
-    ''' ----------------------------------------------------------------------------------------------------
     ''' <summary>
-    ''' Save the assembly info table as a plain text file.
+    ''' Gets the selected item of the current list view.
     ''' </summary>
-    ''' ----------------------------------------------------------------------------------------------------
+    ''' <returns>
+    ''' The selected <see cref="ListViewItem"/>.
+    ''' </returns>
+    ''' <exception cref="InvalidOperationException">
+    ''' No item is selected.
+    ''' </exception>
+    Private Function GetSelectedItem() As ListViewItem
+
+        If Me.currentListView.SelectedItems.Count = 0 Then
+            Throw New InvalidOperationException("No list view item is selected.")
+        End If
+        Return Me.currentListView.SelectedItems(0)
+
+    End Function
+
+    ''' <summary>
+    ''' Save the assembly info as a plain text file (UTF-8).
+    ''' </summary>
     ''' <param name="filePath">
     ''' The destination txt file path.
     ''' </param>
-    ''' ----------------------------------------------------------------------------------------------------
     Private Sub SaveAsTextFile(filePath As String)
 
-        Dim sb As New StringBuilder()
-
-        sb.AppendLine(Me.filePath)
-        sb.AppendLine()
-
-        For Each lv As ListView In {Me.ListViewProduct, Me.ListViewBuild, Me.ListViewIdentity}
-
-            Dim dict As Dictionary(Of String, ListViewItem) = DirectCast(lv.Tag, Dictionary(Of String, ListViewItem))
-            Dim largestItemName As String = dict.Keys.OrderByDescending(Function(str As String) str.Length).First()
-
-            Dim groupName As String = lv.Text
-            sb.AppendLine(groupName)
-            sb.AppendLine(New String("-"c, groupName.Length))
-
-            For Each lvItem As ListViewItem In dict.Values
-                sb.AppendFormat("{0,-" & largestItemName.Length & "}: {1}", lvItem.SubItems(0).Text, lvItem.SubItems(1).Text)
-                sb.AppendLine()
-            Next lvItem
-
-            sb.AppendLine()
-        Next lv
+        Dim report As String = AssemblyInfoReport.Build(Me.filePath, Me.groups)
 
         Try
-            File.WriteAllText(filePath, sb.ToString(), Encoding.Default)
+            File.WriteAllText(filePath, report, New UTF8Encoding(encoderShouldEmitUTF8Identifier:=True))
 
-        Catch ex As Exception
+        Catch ex As Exception When (TypeOf ex Is IOException) OrElse
+                                   (TypeOf ex Is UnauthorizedAccessException) OrElse
+                                   (TypeOf ex Is Security.SecurityException)
             MessageBox.Show(Me, ex.Message, Me.Name, MessageBoxButtons.OK, MessageBoxIcon.Error)
 
         End Try

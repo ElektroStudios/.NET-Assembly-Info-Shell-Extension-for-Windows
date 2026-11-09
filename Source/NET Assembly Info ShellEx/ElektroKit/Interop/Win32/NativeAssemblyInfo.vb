@@ -19,16 +19,13 @@ Imports ElektroKit.Interop.Unmanaged.Win32.Interfaces
 
 Namespace ElektroKit.Interop.Unmanaged.Win32.Structures
 
-    ''' ----------------------------------------------------------------------------------------------------
     ''' <summary>
     ''' Contains information about an assembly in the side-by-side assembly store. 
     ''' The information is used by the <see cref="IAssemblyCache.QueryAssemblyInfo"/> method.
     ''' </summary>
-    ''' ----------------------------------------------------------------------------------------------------
     ''' <remarks>
     ''' <see href="https://msdn.microsoft.com/en-us/library/windows/desktop/aa374213%28v=vs.85%29.aspx"/>
     ''' </remarks>
-    ''' ----------------------------------------------------------------------------------------------------
     <DebuggerStepThrough>
     <StructLayout(LayoutKind.Sequential)>
     Public Structure NativeAssemblyInfo

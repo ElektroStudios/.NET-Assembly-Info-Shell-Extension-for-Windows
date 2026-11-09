@@ -20,15 +20,12 @@ Imports ElektroKit.Interop.Unmanaged.Win32.Structures
 
 Namespace ElektroKit.Interop.Unmanaged.Win32.Interfaces
 
-    ''' ----------------------------------------------------------------------------------------------------
     ''' <summary>
     ''' Represents the global assembly cache for use by the fusion technology.
     ''' </summary>
-    ''' ----------------------------------------------------------------------------------------------------
     ''' <remarks>
     ''' <see href="https://msdn.microsoft.com/en-us/library/ms231448(v=vs.110).aspx"/>
     ''' </remarks>
-    ''' ----------------------------------------------------------------------------------------------------
     <ComImport>
     <InterfaceType(ComInterfaceType.InterfaceIsIUnknown)>
     <Guid("E707DCDE-D1CD-11D2-BAB9-00C04F8ECEAE")>
@@ -44,11 +41,9 @@ Namespace ElektroKit.Interop.Unmanaged.Win32.Interfaces
         <PreserveSig()>
         Function NotImplemented1() As Integer
 
-        ''' ----------------------------------------------------------------------------------------------------
         ''' <summary>
         ''' Gets the requested data about the specified assembly.
         ''' </summary>
-        ''' ----------------------------------------------------------------------------------------------------
         ''' <param name="flags">
         ''' Flags defined in <c>Fusion.idl</c>. The following values are supported:
         ''' <para></para> QUERYASMINFO_FLAG_VALIDATE (0x00000001)
@@ -62,11 +57,9 @@ Namespace ElektroKit.Interop.Unmanaged.Win32.Interfaces
         ''' <param name="refAssemblyInfo">
         ''' An <see cref="AssemblyInfo"/> structure that contains data about the assembly.
         ''' </param>
-        ''' ----------------------------------------------------------------------------------------------------
         ''' <returns>
         ''' An <see cref="IntPtr"/> that points to an HRESULT.
         ''' </returns>
-        ''' ----------------------------------------------------------------------------------------------------
         <PreserveSig>
         Function QueryAssemblyInfo(flags As QueryAssemblyInfoFlags,
  <MarshalAs(UnmanagedType.LPWStr)> assemblyName As String,

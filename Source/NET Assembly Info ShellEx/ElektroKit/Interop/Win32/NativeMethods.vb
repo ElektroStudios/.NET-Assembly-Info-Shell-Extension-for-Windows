@@ -20,7 +20,6 @@ Imports ElektroKit.Interop.Unmanaged.Win32.Interfaces
 
 Namespace ElektroKit.Interop.Unmanaged.Win32
 
-    ''' ----------------------------------------------------------------------------------------------------
     ''' <summary>
     ''' Platform Invocation methods (P/Invoke), access unmanaged code.
     ''' <para></para>
@@ -29,20 +28,16 @@ Namespace ElektroKit.Interop.Unmanaged.Win32
     ''' <para></para>
     ''' This class is for methods that can be used anywhere because a stack walk will be performed.
     ''' </summary>
-    ''' ----------------------------------------------------------------------------------------------------
     ''' <remarks>
     ''' <see href="https://msdn.microsoft.com/en-us/library/ms182161.aspx"/>
     ''' </remarks>
-    ''' ----------------------------------------------------------------------------------------------------
     Public NotInheritable Class NativeMethods
 
 #Region " Constructors "
 
-        ''' ----------------------------------------------------------------------------------------------------
         ''' <summary>
         ''' Prevents a default instance of the <see cref="NativeMethods"/> class from being created.
         ''' </summary>
-        ''' ----------------------------------------------------------------------------------------------------
         <DebuggerNonUserCode>
         Private Sub New()
         End Sub
@@ -51,15 +46,12 @@ Namespace ElektroKit.Interop.Unmanaged.Win32
 
 #Region " Fusion.dll "
 
-        ''' ----------------------------------------------------------------------------------------------------
         ''' <summary>
         ''' Gets a pointer to a new <see cref="IAssemblyCache"/> instance that represents the global assembly cache.
         ''' </summary>
-        ''' ----------------------------------------------------------------------------------------------------
         ''' <remarks>
         ''' <see href="https://msdn.microsoft.com/en-us/library/ms230575%28v=vs.110%29.aspx"/>
         ''' </remarks>
-        ''' ----------------------------------------------------------------------------------------------------
         ''' <param name="refAsmCache">
         ''' The returned <see cref="IAssemblyCache"/> pointer.
         ''' </param>
@@ -69,11 +61,9 @@ Namespace ElektroKit.Interop.Unmanaged.Win32
         ''' <para></para>
         ''' <paramref name="reserved"/> must be <see cref="IntPtr.Zero"/>.
         ''' </param>
-        ''' ----------------------------------------------------------------------------------------------------
         ''' <returns>
         ''' An <see cref="IntPtr"/> that points to an HRESULT.
         ''' </returns>
-        ''' ----------------------------------------------------------------------------------------------------
         <SuppressUnmanagedCodeSecurity>
         <DllImport("Fusion.dll")>
         Friend Shared Function CreateAssemblyCache(ByRef refAsmCache As IAssemblyCache,
@@ -85,61 +75,49 @@ reserved As Integer
 
 #Region " Hidden Base Members "
 
-        ''' ----------------------------------------------------------------------------------------------------
         ''' <summary>
         ''' Serves as a hash function for a particular type.
         ''' </summary>
-        ''' ----------------------------------------------------------------------------------------------------
         ''' <returns>
         ''' A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table.
         ''' </returns>
-        ''' ----------------------------------------------------------------------------------------------------
         <EditorBrowsable(EditorBrowsableState.Never)>
         <DebuggerNonUserCode>
         Public Shadows Function GetHashCode() As Integer
             Return MyBase.GetHashCode()
         End Function
 
-        ''' ----------------------------------------------------------------------------------------------------
         ''' <summary>
         ''' Gets the <see cref="Type"/> of the current instance.
         ''' </summary>
-        ''' ----------------------------------------------------------------------------------------------------
         ''' <returns>
         ''' The exact runtime type of the current instance.
         ''' </returns>
-        ''' ----------------------------------------------------------------------------------------------------
         <EditorBrowsable(EditorBrowsableState.Never)>
         <DebuggerNonUserCode>
         Public Shadows Function [GetType]() As Type
             Return MyBase.GetType()
         End Function
 
-        ''' ----------------------------------------------------------------------------------------------------
         ''' <summary>
         ''' Determines whether the specified <see cref="Object"/> is equal to this instance.
         ''' </summary>
-        ''' ----------------------------------------------------------------------------------------------------
         ''' <param name="obj">
         ''' Another object to compare to.
         ''' </param>
-        ''' ----------------------------------------------------------------------------------------------------
         ''' <returns>
         ''' <see langword="True"/> if the specified <see cref="Object"/> is equal to this instance; 
         ''' otherwise, <see langword="False"/>.
         ''' </returns>
-        ''' ----------------------------------------------------------------------------------------------------
         <EditorBrowsable(EditorBrowsableState.Never)>
         <DebuggerNonUserCode>
         Public Shadows Function Equals(obj As Object) As Boolean
             Return MyBase.Equals(obj)
         End Function
 
-        ''' ----------------------------------------------------------------------------------------------------
         ''' <summary>
         ''' Determines whether the specified <see cref="Object"/> instances are considered equal.
         ''' </summary>
-        ''' ----------------------------------------------------------------------------------------------------
         ''' <param name="objA">
         ''' The first object to compare.
         ''' </param>
@@ -147,53 +125,43 @@ reserved As Integer
         ''' <param name="objB">
         ''' The second object to compare.
         ''' </param>
-        ''' ----------------------------------------------------------------------------------------------------
         ''' <returns>
         ''' <see langword="True"/> if the objects are considered equal; otherwise, <see langword="False"/>.
         ''' <para></para>
         ''' If both <paramref name="objA"/> and <paramref name="objB"/> are <see langword="Nothing"/>, 
         ''' the method returns <see langword="True"/>.
         ''' </returns>
-        ''' ----------------------------------------------------------------------------------------------------
         <EditorBrowsable(EditorBrowsableState.Never)>
         <DebuggerNonUserCode>
         Public Shared Shadows Function Equals(objA As Object, objB As Object) As Boolean
             Return Object.Equals(objA, objB)
         End Function
 
-        ''' ----------------------------------------------------------------------------------------------------
         ''' <summary>
         ''' Determines whether the specified <see cref="Object"/> instances are the same instance.
         ''' </summary>
-        ''' ----------------------------------------------------------------------------------------------------
         ''' <param name="objA">
         ''' The first object to compare.
         ''' </param>
-        ''' ----------------------------------------------------------------------------------------------------
         ''' <param name="objB">
         ''' The second object to compare.
         ''' </param>
-        ''' ----------------------------------------------------------------------------------------------------
         ''' <returns>
         ''' <see langword="True"/> if <paramref name="objA"/> is the same instance as <paramref name="objB"/> 
         ''' or if both are <see langword="Nothing"/>; otherwise, <see langword="False"/>.
         ''' </returns>
-        ''' ----------------------------------------------------------------------------------------------------
         <EditorBrowsable(EditorBrowsableState.Never)>
         <DebuggerNonUserCode>
         Public Shared Shadows Function ReferenceEquals(objA As Object, objB As Object) As Boolean
             Return Object.ReferenceEquals(objA, objB)
         End Function
 
-        ''' ----------------------------------------------------------------------------------------------------
         ''' <summary>
         ''' Returns a String that represents the current object.
         ''' </summary>
-        ''' ----------------------------------------------------------------------------------------------------
         ''' <returns>
         ''' A string that represents the current object.
         ''' </returns>
-        ''' ----------------------------------------------------------------------------------------------------
         <EditorBrowsable(EditorBrowsableState.Never)>
         <DebuggerNonUserCode>
         Public Overrides Function ToString() As String

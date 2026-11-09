@@ -9,20 +9,18 @@ Option Infer Off
 
 #Region " Imports "
 
-Imports System.Collections.Specialized
+Imports System.Collections.ObjectModel
 Imports System.Globalization
 Imports System.IO
 Imports System.Reflection
 Imports System.Reflection.Metadata
+Imports System.Reflection.Metadata.Ecma335
 Imports System.Reflection.PortableExecutable
-Imports System.Resources
 Imports System.Runtime.InteropServices
-Imports System.Runtime.Versioning
 Imports System.Security.Cryptography
-Imports System.Security.Permissions
 Imports System.Text
-Imports System.Web
-Imports System.Windows.Media
+
+Imports AssemblyInspection
 
 Imports ElektroKit.Interop.Unmanaged.Win32
 Imports ElektroKit.Interop.Unmanaged.Win32.Enums
@@ -33,657 +31,1579 @@ Imports ElektroKit.Interop.Unmanaged.Win32.Structures
 
 #Region " AssemblyInfo "
 
-''' ----------------------------------------------------------------------------------------------------
 ''' <summary>
-''' Provides information about an <see cref="System.Reflection.Assembly"/>.
+''' Provides information about a .NET assembly file.
 ''' </summary>
-''' ----------------------------------------------------------------------------------------------------
+''' <remarks>
+''' All the information is read from the PE headers and the ECMA-335 metadata of the file
+''' through <see cref="System.Reflection.Metadata"/>. The assembly is never loaded into the current process,
+''' so assemblies of any architecture (x86, x64, ARM64), mixed-mode (C++/CLI) assemblies
+''' and .NET Core / .NET Standard assemblies can be inspected in the same way.
+''' </remarks>
 Public NotInheritable Class AssemblyInfo
 
-#Region " Private Fields "
+#Region " Constants "
 
-    ''' ----------------------------------------------------------------------------------------------------
     ''' <summary>
-    ''' The assembly.
+    ''' The value of <see cref="CodeViewDebugDirectoryData"/> minor version that identifies a portable PDB.
     ''' </summary>
-    ''' ----------------------------------------------------------------------------------------------------
-    Private ReadOnly assembly As Assembly
+    Private Const PortableCodeViewVersionMagic As UShort = &H504D
 
-    ''' ----------------------------------------------------------------------------------------------------
     ''' <summary>
-    ''' The assembly file path.
+    ''' The value of <c>DebuggingModes.DisableOptimizations</c>.
     ''' </summary>
-    ''' ----------------------------------------------------------------------------------------------------
-    Private ReadOnly filepath As String
+    Private Const DebuggingModesDisableOptimizations As Integer = 1 << 8
 
 #End Region
 
 #Region " Properties "
 
-    ''' ----------------------------------------------------------------------------------------------------
     ''' <summary>
-    ''' Gets a value that determines whether the loaded assembly ia a .NET Core assembly.
+    ''' Gets the assembly file path.
     ''' </summary>
-    ''' ----------------------------------------------------------------------------------------------------
-    Public ReadOnly Property IsNetCore As Boolean
+    Public ReadOnly Property FilePath As String
 
-    ''' ----------------------------------------------------------------------------------------------------
     ''' <summary>
-    ''' Gets the <see cref="System.Reflection.AssemblyName"/> of the loaded assembly.
+    ''' Gets the .NET platform family that the assembly was built for.
     ''' </summary>
-    ''' ----------------------------------------------------------------------------------------------------
+    Public ReadOnly Property FrameworkKind As AssemblyFrameworkKind
+
+    ''' <summary>
+    ''' Gets a value that determines whether the assembly is a .NET Core / .NET 5+ assembly.
+    ''' </summary>
+    Public ReadOnly Property IsNetCore As Boolean
+        Get
+            Return Me.FrameworkKind = AssemblyFrameworkKind.NetCore
+        End Get
+    End Property
+
+    ''' <summary>
+    ''' Gets a value that determines whether <see cref="AssemblyInfo.FrameworkKind"/> was inferred from
+    ''' the assembly references, because the assembly has no <c>TargetFrameworkAttribute</c>.
+    ''' </summary>
+    Public ReadOnly Property IsFrameworkKindInferred As Boolean
+
+    ''' <summary>
+    ''' Gets the <see cref="System.Reflection.AssemblyName"/> of the assembly.
+    ''' </summary>
     Public ReadOnly Property AssemblyName As AssemblyName
 
-    ''' ----------------------------------------------------------------------------------------------------
     ''' <summary>
-    ''' Gets the <see cref="System.Diagnostics.FileVersionInfo"/> of the loaded assembly.
+    ''' Gets the simple name of the assembly.
     ''' </summary>
-    ''' ----------------------------------------------------------------------------------------------------
+    Public ReadOnly Property Name As String
+
+    ''' <summary>
+    ''' Gets the assembly version.
+    ''' </summary>
+    Public ReadOnly Property Version As Version
+
+    ''' <summary>
+    ''' Gets the culture name of the assembly, or "neutral".
+    ''' </summary>
+    Public ReadOnly Property Culture As String
+
+    ''' <summary>
+    ''' Gets the display name of the assembly
+    ''' (e.g. <c>Name, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null</c>).
+    ''' </summary>
+    Public ReadOnly Property FullName As String
+
+    ''' <summary>
+    ''' Gets the <see cref="System.Diagnostics.FileVersionInfo"/> of the assembly file.
+    ''' </summary>
     Public ReadOnly Property FileVersionInfo As FileVersionInfo
 
-    ''' ----------------------------------------------------------------------------------------------------
     ''' <summary>
-    ''' Gets the platform of the loaded assembly.
+    ''' Gets the portable executable (PE) headers of the assembly file.
     ''' </summary>
-    ''' ----------------------------------------------------------------------------------------------------
+    Public ReadOnly Property PeHeader As PEHeaders
+
+    ''' <summary>
+    ''' Gets the <see cref="System.Reflection.ProcessorArchitecture"/> of the assembly.
+    ''' </summary>
+    Public ReadOnly Property ProcessorArchitecture As ProcessorArchitecture
+
+    ''' <summary>
+    ''' Gets a friendly name of the target platform of the assembly
+    ''' (e.g. "Any CPU", "Any CPU (prefer 32-bit)", "x86 (32-bit)", "x64 (64-bit)", "ARM64 (64-bit)").
+    ''' </summary>
     Public ReadOnly Property Platform As String
-        Get
-            Dim peKind As PortableExecutableKinds
-            Me.assembly.ManifestModule.GetPEKind(peKind, Nothing)
 
-            If peKind.HasFlag(PortableExecutableKinds.PE32Plus) Then
-                Return "64-bit"
-
-            ElseIf peKind.HasFlag(PortableExecutableKinds.Required32Bit) OrElse
-                   peKind.HasFlag(PortableExecutableKinds.Unmanaged32Bit) Then
-                Return "32-bit"
-
-            ElseIf peKind.HasFlag(PortableExecutableKinds.Preferred32Bit) Then
-                Return "Any CPU ( Prefer 32-bit )"
-
-            Else
-                Return "Any CPU ( Prefer 64-bit )"
-
-            End If
-        End Get
-    End Property
-
-    ''' ----------------------------------------------------------------------------------------------------
     ''' <summary>
-    ''' Gets the CLR runtime version of the loaded assembly.
+    ''' Gets the output type of the assembly, using the Visual Studio project terminology
+    ''' (e.g. "Class Library (DLL)", "Console Application (EXE)", "Windows Application (EXE)").
     ''' </summary>
-    ''' ----------------------------------------------------------------------------------------------------
+    Public ReadOnly Property OutputType As String
+
+    ''' <summary>
+    ''' Gets the CLR (metadata) version the assembly was compiled against (e.g. "4.0.30319").
+    ''' </summary>
     Public ReadOnly Property ClrVersion As String
-        Get
-            Return Me.assembly.ImageRuntimeVersion.TrimStart("v"c)
-        End Get
-    End Property
 
-    ''' ----------------------------------------------------------------------------------------------------
     ''' <summary>
-    ''' Gets the target .NET Framework name of the loaded assembly.
+    ''' Gets the raw value of the <c>TargetFrameworkAttribute</c> (e.g. ".NETFramework,Version=v4.8"),
+    ''' or <see cref="String.Empty"/> if the attribute is not present.
     ''' </summary>
-    ''' ----------------------------------------------------------------------------------------------------
-    Public ReadOnly Property TargetNetFrameworkName As String
-        Get
-            If Not Me.IsNetCore Then
-                Dim attrib As TargetFrameworkAttribute = Me.assembly.GetCustomAttribute(Of TargetFrameworkAttribute)
-                Return If((attrib Is Nothing), String.Empty, attrib.FrameworkDisplayName)
-            Else
+    Public ReadOnly Property TargetFrameworkName As String
 
-            End If
-        End Get
-    End Property
-
-    ''' ----------------------------------------------------------------------------------------------------
     ''' <summary>
-    ''' Gets the target .NET Framework version of the loaded assembly.
+    ''' Gets the target framework identifier (e.g. ".NETFramework", ".NETCoreApp", ".NETStandard"),
+    ''' or <see cref="String.Empty"/> if unknown.
     ''' </summary>
-    ''' ----------------------------------------------------------------------------------------------------
-    Public ReadOnly Property TargetNetFrameworkVersion As Version
-        Get
-            If Not Me.IsNetCore Then
-                Dim attrib As TargetFrameworkAttribute = Me.assembly.GetCustomAttribute(Of TargetFrameworkAttribute)
-                If (attrib IsNot Nothing) Then
-                    Dim nameValues As NameValueCollection = HttpUtility.ParseQueryString(attrib.FrameworkName.Replace(","c, "&"c))
-                    Return New Version(nameValues("Version").TrimStart("v"c))
-                Else
-                    Return Nothing
-                End If
-            Else
+    Public ReadOnly Property TargetFrameworkIdentifier As String
 
-            End If
-        End Get
-    End Property
-
-    ''' ----------------------------------------------------------------------------------------------------
     ''' <summary>
-    ''' Gets the default <see cref="CultureInfo"/> of the loaded assembly.
+    ''' Gets the target framework version, or <see langword="Nothing"/> if unknown.
     ''' </summary>
-    ''' ----------------------------------------------------------------------------------------------------
+    Public ReadOnly Property TargetFrameworkVersion As Version
+
+    ''' <summary>
+    ''' Gets a friendly name of the target framework (e.g. ".NET Framework 4.8", ".NET 8.0", ".NET Standard 2.0"),
+    ''' or <see cref="String.Empty"/> if unknown.
+    ''' </summary>
+    Public ReadOnly Property TargetFrameworkDisplayName As String
+
+    ''' <summary>
+    ''' Gets the target operating system platform of the assembly (e.g. "Windows 7.0" for net8.0-windows),
+    ''' or <see cref="String.Empty"/> if the assembly is not platform-specific.
+    ''' </summary>
+    Public ReadOnly Property TargetPlatform As String
+
+    ''' <summary>
+    ''' Gets the culture name declared by the <c>NeutralResourcesLanguageAttribute</c>,
+    ''' or <see cref="String.Empty"/> if the attribute is not present.
+    ''' </summary>
+    Public ReadOnly Property NeutralResourcesLanguage As String
+
+    ''' <summary>
+    ''' Gets the <see cref="CultureInfo"/> declared by the <c>NeutralResourcesLanguageAttribute</c>,
+    ''' or <see langword="Nothing"/> if the attribute is not present or its culture name is not valid.
+    ''' </summary>
     Public ReadOnly Property DefaultCulture As CultureInfo
-        Get
-            If Not Me.IsNetCore Then
-                Dim attrib As NeutralResourcesLanguageAttribute = Me.assembly.GetCustomAttribute(Of NeutralResourcesLanguageAttribute)
-                Return If((attrib Is Nothing), Nothing, New CultureInfo(attrib.CultureName))
-            Else
-            End If
-        End Get
-    End Property
 
-    ''' ----------------------------------------------------------------------------------------------------
     ''' <summary>
-    ''' Gets the entry-point name (if any) of the loaded assembly.
+    ''' Gets the relative virtual address (RVA) of the native entry-point stub declared in the PE optional header.
+    ''' <para></para>
+    ''' For IL-only images this is the <c>_CorExeMain</c>/<c>_CorDllMain</c> import stub, and it is zero for 64-bit images.
     ''' </summary>
-    ''' ----------------------------------------------------------------------------------------------------
     Public ReadOnly Property EntryPointAddress As Integer
+
+    ''' <summary>
+    ''' Gets the full name of the managed entry-point method (e.g. "MyApp.Program.Main"),
+    ''' "(native code)" for mixed-mode images with a native entry point,
+    ''' or <see cref="String.Empty"/> if the assembly has no entry point.
+    ''' </summary>
+    Public ReadOnly Property EntryPointMethod As String
+
+    ''' <summary>
+    ''' Gets the strong-name signature state of the assembly.
+    ''' </summary>
+    Public ReadOnly Property StrongNameSignature As StrongNameSignatureKind
+
+    ''' <summary>
+    ''' Gets a value that determines whether the assembly is strong-name signed.
+    ''' </summary>
+    Public ReadOnly Property IsStrongNameSigned As Boolean
         Get
-            Return Me.PeHeader.PEHeader.AddressOfEntryPoint
+            Return Me.StrongNameSignature = StrongNameSignatureKind.Signed
         End Get
     End Property
 
-    ''' ----------------------------------------------------------------------------------------------------
     ''' <summary>
-    ''' Gets a value that determine whether the loaded assembly is installed in Global Assembly Cache (GAC).
+    ''' Gets the public key token (lowercase hexadecimal) of the assembly,
+    ''' or <see cref="String.Empty"/> if the assembly has no public key.
     ''' </summary>
-    ''' ----------------------------------------------------------------------------------------------------
+    Public ReadOnly Property PublicKeyToken As String
+
+    ''' <summary>
+    ''' Gets the detected root namespace of the assembly, or <see cref="String.Empty"/> if it could not be detected.
+    ''' </summary>
+    ''' <remarks>
+    ''' An assembly does not necessarily define a root namespace, so this value is a best-effort heuristic.
+    ''' </remarks>
+    Public ReadOnly Property RootNamespace As String
+
+    ''' <summary>
+    ''' Gets the value of the assembly <see cref="GuidAttribute"/> (the type library ID used when exposed to COM),
+    ''' or <see langword="Nothing"/> if the attribute is not present or not valid.
+    ''' </summary>
+    Public ReadOnly Property Guid As Guid?
+
+    ''' <summary>
+    ''' Gets the module version identifier (MVID), a GUID that is unique for every compilation.
+    ''' </summary>
+    Public ReadOnly Property ModuleVersionId As Guid
+
+    ''' <summary>
+    ''' Gets the value of the assembly <see cref="ComVisibleAttribute"/>,
+    ''' or <see langword="Nothing"/> if the attribute is not present (in which case public types are COM-visible).
+    ''' </summary>
+    Public ReadOnly Property IsComVisible As Boolean?
+
+    ''' <summary>
+    ''' Gets the value of the assembly <see cref="CLSCompliantAttribute"/>,
+    ''' or <see langword="Nothing"/> if the attribute is not present.
+    ''' </summary>
+    Public ReadOnly Property IsClsCompliant As Boolean?
+
+    ''' <summary>
+    ''' Gets a description of the assembly-level declarative security permission requests
+    ''' (e.g. "RequestMinimum: SecurityPermission (UnmanagedCode)"),
+    ''' or <see cref="String.Empty"/> if there are none.
+    ''' </summary>
+    Public ReadOnly Property SecurityPermission As String
+
+    ''' <summary>
+    ''' Gets a value that determines whether the assembly
+    ''' has disabled dots per inch (DPI) awareness for all WPF user interface elements.
+    ''' </summary>
+    Public ReadOnly Property IsDpiAwarenessDisabled As Boolean
+
+    ''' <summary>
+    ''' Gets the value of the assembly <see cref="DefaultDllImportSearchPathsAttribute"/>,
+    ''' or <see langword="Nothing"/> if the attribute is not present.
+    ''' </summary>
+    Public ReadOnly Property DefaultDllImportSearchPaths As DllImportSearchPath?
+
+    ''' <summary>
+    ''' Gets a value that determines whether the assembly was produced by a deterministic build.
+    ''' <para></para>
+    ''' In that case the COFF header time stamp is a content hash, not a date.
+    ''' </summary>
+    Public ReadOnly Property IsDeterministic As Boolean
+
+    ''' <summary>
+    ''' Gets the compilation time stamp (UTC) of the assembly,
+    ''' or <see langword="Nothing"/> if the assembly was produced by a deterministic build.
+    ''' </summary>
+    Public ReadOnly Property TimeStamp As DateTimeOffset?
+
+    ''' <summary>
+    ''' Gets the value of the <c>AssemblyConfigurationAttribute</c> (e.g. "Release"),
+    ''' or <see cref="String.Empty"/> if the attribute is not present.
+    ''' </summary>
+    Public ReadOnly Property AssemblyConfiguration As String
+
+    ''' <summary>
+    ''' Gets a value that determines whether JIT optimizations are enabled for the assembly,
+    ''' according to its <see cref="DebuggableAttribute"/>.
+    ''' </summary>
+    Public ReadOnly Property IsOptimized As Boolean
+
+    ''' <summary>
+    ''' Gets the build configuration of the assembly: the <c>AssemblyConfigurationAttribute</c> value if present;
+    ''' otherwise "Debug" or "Release", inferred from <see cref="AssemblyInfo.IsOptimized"/>.
+    ''' </summary>
+    Public ReadOnly Property BuildConfiguration As String
+        Get
+            If Not String.IsNullOrWhiteSpace(Me.AssemblyConfiguration) Then
+                Return Me.AssemblyConfiguration
+            End If
+            Return If(Me.IsOptimized, "Release", "Debug")
+        End Get
+    End Property
+
+    ''' <summary>
+    ''' Gets a value that determines whether the assembly is a mixed-mode assembly
+    ''' (contains native code, e.g. compiled with C++/CLI).
+    ''' </summary>
+    Public ReadOnly Property IsMixedMode As Boolean
+
+    ''' <summary>
+    ''' Gets a value that determines whether the assembly contains ReadyToRun (precompiled native) code,
+    ''' according to its managed native header or its <c>ILLibrary</c> CLI flag.
+    ''' </summary>
+    Public ReadOnly Property IsReadyToRun As Boolean
+
+    ''' <summary>
+    ''' Gets a value that determines whether the assembly is a reference assembly (metadata only, not runnable).
+    ''' </summary>
+    Public ReadOnly Property IsReferenceAssembly As Boolean
+
+    ''' <summary>
+    ''' Gets the PDB file path recorded in the CodeView debug directory entry,
+    ''' or <see cref="String.Empty"/> if there is none.
+    ''' </summary>
+    Public ReadOnly Property PdbPath As String
+
+    ''' <summary>
+    ''' Gets a value that determines whether the PDB referenced by <see cref="AssemblyInfo.PdbPath"/> is a portable PDB.
+    ''' </summary>
+    Public ReadOnly Property IsPortablePdb As Boolean
+
+    ''' <summary>
+    ''' Gets a value that determines whether a portable PDB is embedded in the assembly file.
+    ''' </summary>
+    Public ReadOnly Property HasEmbeddedPdb As Boolean
+
+    ''' <summary>
+    ''' Gets the assemblies referenced by the assembly.
+    ''' </summary>
+    Public ReadOnly Property ReferencedAssemblies As ReadOnlyCollection(Of AssemblyName)
+
+    ''' <summary>
+    ''' Gets the names of the native modules (DLLs) referenced by P/Invoke declarations of the assembly.
+    ''' </summary>
+    Public ReadOnly Property NativeModuleReferences As ReadOnlyCollection(Of String)
+
+    ''' <summary>
+    ''' Gets the MD5 hash (uppercase hexadecimal) of the assembly file.
+    ''' </summary>
+    Public ReadOnly Property MD5Hash As String
+
+    ''' <summary>
+    ''' Gets the SHA-1 hash (uppercase hexadecimal) of the assembly file.
+    ''' </summary>
+    Public ReadOnly Property SHA1Hash As String
+
+    ''' <summary>
+    ''' Gets the SHA-256 hash (uppercase hexadecimal) of the assembly file.
+    ''' </summary>
+    Public ReadOnly Property SHA256Hash As String
+
+    ''' <summary>
+    ''' Gets a value that determines whether the assembly is installed in the Global Assembly Cache (GAC).
+    ''' <para></para>
+    ''' Only strong-named .NET Framework assemblies can be installed in the GAC.
+    ''' </summary>
     Public ReadOnly Property IsInstalledInGAC As Boolean
         Get
-            If (Me.isInstalledInGacB = TriState.UseDefault) Then
-                Me.isInstalledInGacB = If((Me.IsStrongNameSigned AndAlso Me.GetIsAssemblyInGAC()), TriState.True, TriState.False)
-            End If
-            Return CBool(Me.isInstalledInGacB)
+            Me.EnsureGacQueried()
+            Return Me.gacPathB IsNot Nothing
         End Get
     End Property
-    ''' ----------------------------------------------------------------------------------------------------
+
+    ''' <summary>
+    ''' Gets the assembly display name used to query the Global Assembly Cache (GAC),
+    ''' or <see langword="Nothing"/> if the assembly is not installed in the GAC.
+    ''' </summary>
+    Public ReadOnly Property GacFullName As String
+        Get
+            Return If(Me.IsInstalledInGAC, Me.GetGacQueryName(), Nothing)
+        End Get
+    End Property
+
+    ''' <summary>
+    ''' Gets the path of the assembly file inside the Global Assembly Cache (GAC) directory,
+    ''' or <see langword="Nothing"/> if the assembly is not installed in the GAC.
+    ''' </summary>
+    Public ReadOnly Property GacPath As String
+        Get
+            Me.EnsureGacQueried()
+            Return Me.gacPathB
+        End Get
+    End Property
+
+#End Region
+
+#Region " Private Fields "
+
+    ''' <summary>
+    ''' A value that determines whether the Global Assembly Cache (GAC) was already queried.
+    ''' </summary>
+    Private isGacQueried As Boolean
+
     ''' <summary>
     ''' ( Backing Field )
     ''' <para></para>
-    ''' A value that determine whether the loaded assembly is installed in Global Assembly Cache (GAC).
+    ''' The path of the assembly inside the GAC, or <see langword="Nothing"/> if it is not installed in the GAC.
     ''' </summary>
-    ''' ----------------------------------------------------------------------------------------------------
-    Private isInstalledInGacB As TriState = TriState.UseDefault
-
-    ''' ----------------------------------------------------------------------------------------------------
-    ''' <summary>
-    ''' Gets a suitable assembly name for Global Assembly Cache (GAC).
-    ''' </summary>
-    ''' ----------------------------------------------------------------------------------------------------
-    Public ReadOnly Property GacFullName As String
-        Get
-            Return If(Not (Me.IsInstalledInGAC),
-                Nothing,
-                String.Format("{0}, ProcessorArchitecture={1}", Me.AssemblyName.FullName, Me.AssemblyName.ProcessorArchitecture.ToString().ToUpper()))
-        End Get
-    End Property
-
-    ''' ----------------------------------------------------------------------------------------------------
-    ''' <summary>
-    ''' Gets the assembly path from Global Assembly Cache (GAC) directory.
-    ''' </summary>
-    ''' ----------------------------------------------------------------------------------------------------
-    Public ReadOnly Property GacPath As String
-        Get
-            Return If(Not (Me.IsInstalledInGAC), Nothing, Me.assembly.Location)
-        End Get
-    End Property
-
-    ''' ----------------------------------------------------------------------------------------------------
-    ''' <summary>
-    ''' Gets the portable executable (PE) header of the loaded assembly.
-    ''' </summary>
-    ''' ----------------------------------------------------------------------------------------------------
-    Public ReadOnly Property PeHeader As PEHeaders
-        Get
-            If (Me.peHeaderB Is Nothing) Then
-                Me.peHeaderB = Me.GetPEHeader()
-            End If
-            Return Me.peHeaderB
-        End Get
-    End Property
-    ''' ----------------------------------------------------------------------------------------------------
-    ''' <summary>
-    ''' ( Backing Field)
-    ''' <para></para>
-    ''' The portable executable (PE) header of the loaded assembly.
-    ''' </summary>
-    ''' ----------------------------------------------------------------------------------------------------
-    Private peHeaderB As PEHeaders
-
-    ''' ----------------------------------------------------------------------------------------------------
-    ''' <summary>
-    ''' Gets a value that determine whether the loaded assembly is strong-name signed.
-    ''' </summary>
-    ''' ----------------------------------------------------------------------------------------------------
-    Public ReadOnly Property IsStrongNameSigned As Boolean
-        Get
-            Return Me.PeHeader.CorHeader.Flags.HasFlag(CorFlags.StrongNameSigned)
-        End Get
-    End Property
-
-    ''' ----------------------------------------------------------------------------------------------------
-    ''' <summary>
-    ''' Gets the public key token (if any) used to sign the loaded assembly.
-    ''' </summary>
-    ''' ----------------------------------------------------------------------------------------------------
-    Public ReadOnly Property PublicKeyToken As String
-        Get
-            Return Me.GetPublicKeyToken()
-        End Get
-    End Property
-
-    ''' ----------------------------------------------------------------------------------------------------
-    ''' <summary>
-    ''' Gets the portable executable (PE) file kind of the loaded assembly.
-    ''' </summary>
-    ''' ----------------------------------------------------------------------------------------------------
-    Public ReadOnly Property PeFileKind As String ' PEFileKinds
-        Get
-            ' NOTE: the header values cause 'PEHeaders.IsConsoleApplication' to return true for dlls, 
-            ' so we need to check 'PEHeaders.IsDll' first.
-            If (Me.PeHeader.IsDll) Then
-                Return "Dynamic-Link Library (dll)"
-                ' Return PEFileKinds.Dll
-
-            ElseIf (Me.PeHeader.IsConsoleApplication) Then
-                Return "Console application (CLI)"
-                ' Return PEFileKinds.ConsoleApplication
-            Else
-                Return "Window application (GUI)"
-                ' Return PEFileKinds.WindowApplication
-            End If
-        End Get
-    End Property
-
-    ''' ----------------------------------------------------------------------------------------------------
-    ''' <summary>
-    ''' Gets the root namespace (if any) of the loaded assembly.
-    ''' </summary>
-    ''' ----------------------------------------------------------------------------------------------------
-    Public ReadOnly Property RootNamespace As XNamespace
-        Get
-            Return Me.GetRootNamespace()
-        End Get
-    End Property
-
-    ''' ----------------------------------------------------------------------------------------------------
-    ''' <summary>
-    ''' Gets the assembly GUID (if any) of the loaded assembly.
-    ''' </summary>
-    ''' ----------------------------------------------------------------------------------------------------
-    Public ReadOnly Property Guid As Guid
-        Get
-            If Not Me.IsNetCore Then
-                Dim attrib As GuidAttribute = Me.assembly.GetCustomAttribute(Of GuidAttribute)
-                Return If((attrib Is Nothing), Nothing, New Guid(attrib.Value))
-            Else
-            End If
-        End Get
-    End Property
-
-    ''' ----------------------------------------------------------------------------------------------------
-    ''' <summary>
-    ''' Gets a value that determine whether the loaded assembly is COM visible.
-    ''' </summary>
-    ''' ----------------------------------------------------------------------------------------------------
-    Public ReadOnly Property IsCOMVisible As Boolean
-        Get
-            If Not Me.IsNetCore Then
-                Dim attrib As ComVisibleAttribute = Me.assembly.GetCustomAttribute(Of ComVisibleAttribute)
-                Return attrib IsNot Nothing AndAlso attrib.Value
-            Else
-            End If
-        End Get
-    End Property
-
-    ''' ----------------------------------------------------------------------------------------------------
-    ''' <summary>
-    ''' Gets a value that determine whether the loaded assembly is CLS compliant.
-    ''' </summary>
-    ''' ----------------------------------------------------------------------------------------------------
-    Public ReadOnly Property IsClsCompliant As Boolean
-        Get
-            If Not Me.IsNetCore Then
-                Dim attrib As CLSCompliantAttribute = Me.assembly.GetCustomAttribute(Of CLSCompliantAttribute)
-                Return attrib IsNot Nothing AndAlso attrib.IsCompliant
-            Else
-            End If
-        End Get
-    End Property
-
-    ''' ----------------------------------------------------------------------------------------------------
-    ''' <summary>
-    ''' Gets the security permission flags (if any) of the loaded assembly.
-    ''' </summary>
-    ''' ----------------------------------------------------------------------------------------------------
-    Public ReadOnly Property SecurityPermission As SecurityPermissionAttribute
-        Get
-            If Not Me.IsNetCore Then
-                Return Me.assembly.GetCustomAttribute(Of SecurityPermissionAttribute)
-            Else
-            End If
-        End Get
-    End Property
-
-    ''' ----------------------------------------------------------------------------------------------------
-    ''' <summary>
-    ''' Gets a value that determine whether the loaded assembly 
-    ''' has disabled dots per inch (DPI) awareness for all user interface elements.
-    ''' </summary>
-    ''' ----------------------------------------------------------------------------------------------------
-    Public ReadOnly Property IsDpiAwarenessDisabled As Boolean
-        Get
-            If Not Me.IsNetCore Then
-                Dim attrib As DisableDpiAwarenessAttribute = Me.assembly.GetCustomAttribute(Of DisableDpiAwarenessAttribute)
-                Return (attrib IsNot Nothing)
-            Else
-            End If
-        End Get
-    End Property
-
-    ''' ----------------------------------------------------------------------------------------------------
-    ''' <summary>
-    ''' Gets the default <see cref="DllImportSearchPath"/> flags (if any) of the loaded assembly.
-    ''' </summary>
-    ''' ----------------------------------------------------------------------------------------------------
-    Public ReadOnly Property DefaultDllImportSearchPaths As DllImportSearchPath
-        Get
-            If Not Me.IsNetCore Then
-                Dim attrib As DefaultDllImportSearchPathsAttribute = Me.assembly.GetCustomAttribute(Of DefaultDllImportSearchPathsAttribute)
-                Return If((attrib IsNot Nothing), attrib.Paths, Nothing)
-            Else
-            End If
-        End Get
-    End Property
-
-    ''' ----------------------------------------------------------------------------------------------------
-    ''' <summary>
-    ''' Gets the compilation timestamp of the loaded assembly.
-    ''' </summary>
-    ''' ----------------------------------------------------------------------------------------------------
-    Public ReadOnly Property TimeStamp As DateTimeOffset
-        Get
-            If Not Me.IsNetCore Then
-                Dim secondsSince1970 As Integer = Me.PeHeader.CoffHeader.TimeDateStamp
-                Dim dt As DateTimeOffset = (New DateTimeOffset(1970, 1, 1, 0, 0, 0, DateTimeOffset.Now.Offset) + DateTimeOffset.Now.Offset)
-                dt = dt.AddSeconds(secondsSince1970)
-                Return dt
-            Else
-            End If
-        End Get
-    End Property
-
-    ''' ----------------------------------------------------------------------------------------------------
-    ''' <summary>
-    ''' Gets the MD5 hash of the loaded assembly file.
-    ''' </summary>
-    ''' ----------------------------------------------------------------------------------------------------
-    Public ReadOnly Property MD5Hash As String
-
-    ''' ----------------------------------------------------------------------------------------------------
-    ''' <summary>
-    ''' Gets the SHA-1 hash of the loaded assembly file.
-    ''' </summary>
-    ''' ----------------------------------------------------------------------------------------------------
-    Public ReadOnly Property SHA1Hash As String
-
-    ''' ----------------------------------------------------------------------------------------------------
-    ''' <summary>
-    ''' Gets the SHA-256 hash of the loaded assembly file.
-    ''' </summary>
-    ''' ----------------------------------------------------------------------------------------------------
-    Public ReadOnly Property SHA256Hash As String
+    Private gacPathB As String
 
 #End Region
 
 #Region " Constructors "
 
-    ''' ----------------------------------------------------------------------------------------------------
-    ''' <summary>
-    ''' Prevents a default instance of the <see cref="AssemblyInfo"/> class from being created.
-    ''' </summary>
-    ''' ----------------------------------------------------------------------------------------------------
-    Private Sub New()
-    End Sub
-
-    ''' ----------------------------------------------------------------------------------------------------
     ''' <summary>
     ''' Initializes a new instance of the <see cref="AssemblyInfo"/> class.
     ''' </summary>
-    ''' ----------------------------------------------------------------------------------------------------
     ''' <param name="filepath">
     ''' The assembly file path.
     ''' </param>
-    ''' ----------------------------------------------------------------------------------------------------
+    ''' <exception cref="ArgumentNullException">
+    ''' <paramref name="filepath"/> is <see langword="Nothing"/> or empty.
+    ''' </exception>
+    '''
+    ''' <exception cref="FileNotFoundException">
+    ''' The file does not exist.
+    ''' </exception>
+    '''
+    ''' <exception cref="BadImageFormatException">
+    ''' The file is not a valid .NET assembly.
+    ''' </exception>
     Public Sub New(filepath As String)
-        Me.filepath = filepath
 
+        If String.IsNullOrEmpty(filepath) Then
+            Throw New ArgumentNullException(NameOf(filepath))
+        End If
+        If Not File.Exists(filepath) Then
+            Throw New FileNotFoundException("The assembly file was not found.", filepath)
+        End If
+
+        Me.FilePath = filepath
         Dim rawAssembly As Byte() = File.ReadAllBytes(filepath)
 
-        Try
-            Me.assembly = Assembly.Load(rawAssembly) ' DON'T USE ONLY REFLECTION ( Assembly.ReflectionOnlyLoadFrom(filepath) )
+        Using stream As New MemoryStream(rawAssembly, writable:=False),
+              peReader As New PEReader(stream, PEStreamOptions.PrefetchEntireImage)
 
-        Catch ex As BadImageFormatException
-            ' Add custom handling for BadImageFormatException.
-            Throw
+            ' Throws BadImageFormatException if the file is not a PE image.
+            Me.PeHeader = peReader.PEHeaders
+            If Not peReader.HasMetadata Then
+                Throw New BadImageFormatException($"The file is not a .NET assembly (it has no CLI metadata): {filepath}", filepath)
+            End If
 
-        Catch ex As FileLoadException
-            ' Add custom handling for FileLoadException.
-            Throw
+            Dim reader As MetadataReader = peReader.GetMetadataReader()
+            If Not reader.IsAssembly Then
+                Throw New BadImageFormatException($"The file is a .NET module, not an assembly (it has no assembly manifest): {filepath}", filepath)
+            End If
 
-        Catch ex As Exception
-            ' Add custom handling for Exception.
-            Throw
+            Dim attributes As Dictionary(Of String, CustomAttribute) = MetadataReaderHelper.GetAssemblyAttributes(reader)
+            Dim corHeader As CorHeader = Me.PeHeader.CorHeader
+            Dim machine As Machine = Me.PeHeader.CoffHeader.Machine
 
-        End Try
+            ' Identity
+            Dim definition As AssemblyDefinition = reader.GetAssemblyDefinition()
+            Dim cultureName As String = reader.GetString(definition.Culture)
+            Me.Name = reader.GetString(definition.Name)
+            Me.Version = definition.Version
+            Me.Culture = If(String.IsNullOrEmpty(cultureName), "neutral", cultureName)
+            Me.PublicKeyToken = AssemblyInfo.ComputePublicKeyToken(reader.GetBlobBytes(definition.PublicKey))
+            Me.FullName = $"{Me.Name}, Version={Me.Version}, Culture={Me.Culture}, PublicKeyToken={If(Me.PublicKeyToken.Length = 0, "null", Me.PublicKeyToken)}"
+            Me.AssemblyName = New AssemblyName(Me.FullName)
+            Me.ModuleVersionId = reader.GetGuid(reader.GetModuleDefinition().Mvid)
+            Me.StrongNameSignature = AssemblyInfo.GetStrongNameSignature(reader, corHeader.Flags)
+            Me.Guid = AssemblyInfo.ParseGuid(AssemblyInfo.GetStringArgument(reader, attributes, "System.Runtime.InteropServices.GuidAttribute"))
 
-        Me.IsNetCore = Me.IsNetCoreAssembly(Me.assembly)
+            ' PE / CLI headers
+            Me.ProcessorArchitecture = PeImageInspector.GetProcessorArchitecture(machine, corHeader.Flags)
+            Me.Platform = PeImageInspector.GetPlatformName(machine, corHeader.Flags)
+            Me.OutputType = PeImageInspector.GetOutputType(Me.PeHeader)
+            Me.ClrVersion = reader.MetadataVersion.TrimStart("v"c)
+            Me.EntryPointAddress = Me.PeHeader.PEHeader.AddressOfEntryPoint
+            Me.EntryPointMethod = AssemblyInfo.GetEntryPointMethod(reader, corHeader)
+            ' ReadyToRun (crossgen) images clear the ILOnly flag and set ILLibrary, but they are not mixed-mode (C++/CLI).
+            Me.IsReadyToRun = (corHeader.ManagedNativeHeaderDirectory.Size > 0) OrElse
+                              ((corHeader.Flags And CorFlags.ILLibrary) = CorFlags.ILLibrary)
+            Me.IsMixedMode = ((corHeader.Flags And CorFlags.ILOnly) <> CorFlags.ILOnly) AndAlso Not Me.IsReadyToRun
+            Dim debugData As DebugDirectoryData = AssemblyInfo.ReadDebugDirectory(peReader)
+            Me.IsDeterministic = debugData.IsDeterministic
+            Me.HasEmbeddedPdb = debugData.HasEmbeddedPdb
+            Me.PdbPath = debugData.PdbPath
+            Me.IsPortablePdb = debugData.IsPortablePdb
+            Me.TimeStamp = AssemblyInfo.GetTimeStamp(Me.PeHeader.CoffHeader.TimeDateStamp, Me.IsDeterministic)
 
-        Me.MD5Hash = Me.ComputeHashOfData(Of MD5CryptoServiceProvider)(rawAssembly)
-        Me.SHA1Hash = Me.ComputeHashOfData(Of SHA1CryptoServiceProvider)(rawAssembly)
-        Me.SHA256Hash = Me.ComputeHashOfData(Of SHA256CryptoServiceProvider)(rawAssembly)
+            ' Target framework
+            Dim framework As TargetFrameworkData = AssemblyInfo.ReadTargetFramework(reader, attributes)
+            Me.TargetFrameworkName = framework.Name
+            Me.TargetFrameworkIdentifier = framework.Identifier
+            Me.TargetFrameworkVersion = framework.Version
+            Me.TargetFrameworkDisplayName = framework.DisplayName
+            Me.FrameworkKind = framework.Kind
+            Me.IsFrameworkKindInferred = framework.IsKindInferred
+            Me.TargetPlatform = AssemblyInfo.FormatPlatformName(
+                If(AssemblyInfo.GetStringArgument(reader, attributes, "System.Runtime.Versioning.TargetPlatformAttribute"),
+                   AssemblyInfo.GetStringArgument(reader, attributes, "System.Runtime.Versioning.SupportedOSPlatformAttribute")))
 
-        Me.AssemblyName = Me.assembly.GetName()
+            ' Assembly attributes
+            Me.NeutralResourcesLanguage = If(AssemblyInfo.GetStringArgument(reader, attributes, "System.Resources.NeutralResourcesLanguageAttribute"), String.Empty)
+            Me.DefaultCulture = AssemblyInfo.TryCreateCulture(Me.NeutralResourcesLanguage)
+            Me.IsComVisible = AssemblyInfo.GetBooleanArgument(reader, attributes, "System.Runtime.InteropServices.ComVisibleAttribute")
+            Me.IsClsCompliant = AssemblyInfo.GetBooleanArgument(reader, attributes, "System.CLSCompliantAttribute")
+            Me.IsDpiAwarenessDisabled = attributes.ContainsKey("System.Windows.Media.DisableDpiAwarenessAttribute")
+            Me.IsReferenceAssembly = attributes.ContainsKey("System.Runtime.CompilerServices.ReferenceAssemblyAttribute")
+            Me.DefaultDllImportSearchPaths = AssemblyInfo.GetDllImportSearchPaths(reader, attributes)
+            Me.AssemblyConfiguration = If(AssemblyInfo.GetStringArgument(reader, attributes, "System.Reflection.AssemblyConfigurationAttribute"), String.Empty)
+            Me.IsOptimized = AssemblyInfo.GetIsOptimized(reader, attributes)
+            Me.SecurityPermission = DeclarativeSecurityDecoder.Describe(reader)
+            Me.RootNamespace = AssemblyInfo.DetectRootNamespace(reader)
+
+            ' References
+            Me.ReferencedAssemblies = AssemblyInfo.ReadAssemblyReferences(reader)
+            Me.NativeModuleReferences = AssemblyInfo.ReadNativeModuleReferences(reader)
+        End Using
+
+        Me.MD5Hash = AssemblyInfo.ComputeHash(MD5.Create(), rawAssembly)
+        Me.SHA1Hash = AssemblyInfo.ComputeHash(SHA1.Create(), rawAssembly)
+        Me.SHA256Hash = AssemblyInfo.ComputeHash(SHA256.Create(), rawAssembly)
+
         Me.FileVersionInfo = FileVersionInfo.GetVersionInfo(filepath)
     End Sub
 
 #End Region
 
-#Region " Private Methods "
+#Region " Public Methods "
 
-    ''' ----------------------------------------------------------------------------------------------------
     ''' <summary>
-    ''' Determines whether the specified assembly ia a .NET Core assembly.
+    ''' Determines whether the specified file is a .NET assembly, by reading only its PE and CLI headers.
     ''' </summary>
-    ''' ----------------------------------------------------------------------------------------------------
+    ''' <param name="filepath">
+    ''' The file path.
+    ''' </param>
     ''' <returns>
-    ''' <see langword="True"/> if the specified assembly ia a .NET Core assembly; otherwise, <see langword="False"/>.
+    ''' <see langword="True"/> if the file is a .NET assembly;
+    ''' <see langword="False"/> if it is not a PE image, has no CLI metadata, or is a module without manifest.
     ''' </returns>
-    ''' ----------------------------------------------------------------------------------------------------
-    <DebuggerStepThrough>
-    Private Function IsNetCoreAssembly(assembly As Assembly) As Boolean
+    ''' <exception cref="ArgumentNullException">
+    ''' <paramref name="filepath"/> is <see langword="Nothing"/> or empty.
+    ''' </exception>
+    '''
+    ''' <exception cref="IOException">
+    ''' The file cannot be read.
+    ''' </exception>
+    Public Shared Function IsAssemblyFile(filepath As String) As Boolean
 
-        Dim assemblyNames As String() = {
-            "System.Collections",
-            "System.Windows.Forms",
-            "System.ComponentModel.Prmitives",
-            "System.Drawing.Prmitives"
-        }
-
-        Return Me.assembly.GetReferencedAssemblies().Any(
-            Function(x)
-                Return (assemblyNames.Contains(x.Name) AndAlso x.Version.Major >= 5) OrElse
-                       (x.Name.Equals("System.Runtime") AndAlso x.Version.Major >= 4 AndAlso x.Version.Minor > 0)
-            End Function)
-
-    End Function
-
-    ''' ----------------------------------------------------------------------------------------------------
-    ''' <summary>
-    ''' Determines whether the loaded assembly is installed in the Global Assembly Cache (GAC).
-    ''' </summary>
-    ''' ----------------------------------------------------------------------------------------------------
-    ''' <returns>
-    ''' <see langword="True"/> if the assembly is installed in GAC; otherwise, <see langword="False"/>.
-    ''' </returns>
-    ''' ----------------------------------------------------------------------------------------------------
-    <DebuggerStepThrough>
-    Private Function GetIsAssemblyInGAC() As Boolean
-
-        Dim fullName As String = String.Format("{0}, ProcessorArchitecture={1}", Me.AssemblyName.FullName, Me.AssemblyName.ProcessorArchitecture.ToString().ToUpper())
-
-        Dim hResult As Integer
-        Dim assCache As IAssemblyCache = Nothing
-        Dim asmInfo As New NativeAssemblyInfo With {
-            .CharBuffer = 1024,
-            .AssemblyFlags = AssemblyInfoFlags.AssemblyinfoFlagInstalled
-        }
-
-        asmInfo.CurrentAssemblyPath = New String(ControlChars.NullChar, asmInfo.CharBuffer)
-
-        hResult = NativeMethods.CreateAssemblyCache(assCache, 0)
-        If (hResult = 0) Then
-            hResult = assCache.QueryAssemblyInfo(QueryAssemblyInfoFlags.QueryAsmInfoValidate, fullName, asmInfo)
-            Dim result As Boolean = (hResult = 0)
-            Return result
-
-        Else
-            Marshal.ThrowExceptionForHR(hResult)
-            Return False
-
+        If String.IsNullOrEmpty(filepath) Then
+            Throw New ArgumentNullException(NameOf(filepath))
         End If
 
-    End Function
+        Using stream As New FileStream(filepath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite Or FileShare.Delete),
+              peReader As New PEReader(stream)
 
-    ''' ----------------------------------------------------------------------------------------------------
-    ''' <summary>
-    ''' Gets the portable executable (PE) header of the loaded assembly.
-    ''' </summary>
-    ''' ----------------------------------------------------------------------------------------------------
-    ''' <returns>
-    ''' The resulting <see cref="PEHeaders"/>.
-    ''' </returns>
-    ''' ----------------------------------------------------------------------------------------------------
-    <DebuggerStepThrough>
-    Private Function GetPEHeader() As PEHeaders
+            Try
+                Return peReader.HasMetadata AndAlso peReader.GetMetadataReader().IsAssembly
 
-        Using fs As FileStream = File.OpenRead(Me.filepath),
-            peReader As New PEReader(fs, PEStreamOptions.Default)
+            Catch ex As BadImageFormatException
+                ' Not a PE image, or corrupted CLI metadata: by definition, not a (readable) .NET assembly.
+                Return False
 
-            Return peReader.PEHeaders
+            End Try
         End Using
-
     End Function
 
-    ''' ----------------------------------------------------------------------------------------------------
+#End Region
+
+#Region " Friend Methods "
+
     ''' <summary>
-    ''' Gets the public key token (if any) used to sign the loaded assembly.
+    ''' Parses a target framework name (e.g. ".NETFramework,Version=v4.8,Profile=Client").
     ''' </summary>
-    ''' ----------------------------------------------------------------------------------------------------
+    ''' <param name="frameworkName">
+    ''' The target framework name.
+    ''' </param>
+    '''
+    ''' <param name="identifier">
+    ''' When this method returns, contains the framework identifier.
+    ''' </param>
+    '''
+    ''' <param name="version">
+    ''' When this method returns, contains the framework version, or <see langword="Nothing"/> if missing or invalid.
+    ''' </param>
+    '''
+    ''' <param name="profile">
+    ''' When this method returns, contains the framework profile, or <see cref="String.Empty"/>.
+    ''' </param>
     ''' <returns>
-    ''' The resulting <see cref="PEHeaders"/>.
+    ''' <see langword="True"/> if the framework name has at least an identifier; otherwise, <see langword="False"/>.
     ''' </returns>
-    ''' ----------------------------------------------------------------------------------------------------
-    Private Function GetPublicKeyToken() As String
-        Dim bytes As Byte() = Me.assembly.GetName().GetPublicKeyToken()
-        If (bytes Is Nothing) OrElse (bytes.Length = 0) Then
+    Friend Shared Function TryParseFrameworkName(frameworkName As String, ByRef identifier As String, ByRef version As Version, ByRef profile As String) As Boolean
+
+        identifier = String.Empty
+        version = Nothing
+        profile = String.Empty
+
+        If String.IsNullOrWhiteSpace(frameworkName) Then
+            Return False
+        End If
+
+        Dim parts As String() = frameworkName.Split(","c)
+        identifier = parts(0).Trim()
+
+        For i As Integer = 1 To parts.Length - 1
+            Dim separatorIndex As Integer = parts(i).IndexOf("="c)
+            If separatorIndex = -1 Then
+                Continue For
+            End If
+
+            Dim key As String = parts(i).Substring(0, separatorIndex).Trim()
+            Dim value As String = parts(i).Substring(separatorIndex + 1).Trim()
+
+            If key.Equals("Version", StringComparison.OrdinalIgnoreCase) Then
+                Dim parsedVersion As Version = Nothing
+                If System.Version.TryParse(value.TrimStart("v"c, "V"c), parsedVersion) Then
+                    version = parsedVersion
+                End If
+
+            ElseIf key.Equals("Profile", StringComparison.OrdinalIgnoreCase) Then
+                profile = value
+
+            End If
+        Next i
+
+        Return identifier.Length <> 0
+    End Function
+
+    ''' <summary>
+    ''' Gets a friendly target framework name (e.g. ".NET Framework 4.8", ".NET Core 3.1", ".NET 8.0", ".NET Standard 2.0").
+    ''' </summary>
+    ''' <param name="identifier">
+    ''' The framework identifier.
+    ''' </param>
+    '''
+    ''' <param name="version">
+    ''' The framework version. It can be <see langword="Nothing"/>.
+    ''' </param>
+    '''
+    ''' <param name="profile">
+    ''' The framework profile. It can be <see langword="Nothing"/> or empty.
+    ''' </param>
+    ''' <returns>
+    ''' The friendly target framework name.
+    ''' </returns>
+    Friend Shared Function GetFrameworkDisplayName(identifier As String, version As Version, profile As String) As String
+
+        Dim versionText As String = AssemblyInfo.FormatFrameworkVersion(version)
+        Dim name As String
+
+        Select Case identifier
+            Case ".NETFramework"
+                name = $".NET Framework {versionText}"
+
+            Case ".NETCoreApp"
+                name = If((version IsNot Nothing) AndAlso (version.Major >= 5), $".NET {versionText}", $".NET Core {versionText}")
+
+            Case ".NETStandard"
+                name = $".NET Standard {versionText}"
+
+            Case ".NETPortable"
+                name = $".NET Portable {versionText}"
+
+            Case Else
+                name = $"{identifier} {versionText}"
+        End Select
+
+        name = name.Trim()
+        If Not String.IsNullOrEmpty(profile) Then
+            ' Portable profiles are already named "ProfileNNN"; framework profiles are not (e.g. "Client").
+            Dim profileText As String = If(profile.StartsWith("Profile", StringComparison.OrdinalIgnoreCase), profile, $"{profile} Profile")
+            name = $"{name} ({profileText})"
+        End If
+        Return name
+    End Function
+
+#End Region
+
+#Region " Private Types "
+
+    ''' <summary>
+    ''' The target framework information of an assembly.
+    ''' </summary>
+    Private Structure TargetFrameworkData
+
+        ''' <summary>The raw <c>TargetFrameworkAttribute</c> value, or <see cref="String.Empty"/>.</summary>
+        Friend Name As String
+
+        ''' <summary>The framework identifier, or <see cref="String.Empty"/>.</summary>
+        Friend Identifier As String
+
+        ''' <summary>The framework version, or <see langword="Nothing"/>.</summary>
+        Friend Version As Version
+
+        ''' <summary>The friendly framework name, or <see cref="String.Empty"/>.</summary>
+        Friend DisplayName As String
+
+        ''' <summary>The framework kind.</summary>
+        Friend Kind As AssemblyFrameworkKind
+
+        ''' <summary>A value that determines whether <see cref="TargetFrameworkData.Kind"/> was inferred.</summary>
+        Friend IsKindInferred As Boolean
+
+    End Structure
+
+    ''' <summary>
+    ''' The relevant information of the debug directory of an assembly.
+    ''' </summary>
+    Private Structure DebugDirectoryData
+
+        ''' <summary>A value that determines whether there is a Reproducible (deterministic build) entry.</summary>
+        Friend IsDeterministic As Boolean
+
+        ''' <summary>A value that determines whether there is an embedded portable PDB entry.</summary>
+        Friend HasEmbeddedPdb As Boolean
+
+        ''' <summary>The PDB path of the first CodeView entry, or <see cref="String.Empty"/>.</summary>
+        Friend PdbPath As String
+
+        ''' <summary>A value that determines whether the CodeView entry refers to a portable PDB.</summary>
+        Friend IsPortablePdb As Boolean
+
+    End Structure
+
+#End Region
+
+#Region " Private Methods (Reading) "
+
+    ''' <summary>
+    ''' Reads the target framework, from the <c>TargetFrameworkAttribute</c> if present,
+    ''' or inferred from the assembly references otherwise.
+    ''' </summary>
+    ''' <param name="reader">
+    ''' The metadata reader.
+    ''' </param>
+    '''
+    ''' <param name="attributes">
+    ''' The assembly custom attributes.
+    ''' </param>
+    ''' <returns>
+    ''' The target framework information.
+    ''' </returns>
+    Private Shared Function ReadTargetFramework(reader As MetadataReader, attributes As Dictionary(Of String, CustomAttribute)) As TargetFrameworkData
+
+        Const AttributeName As String = "System.Runtime.Versioning.TargetFrameworkAttribute"
+
+        Dim data As New TargetFrameworkData With {
+            .Name = String.Empty,
+            .Identifier = String.Empty,
+            .DisplayName = String.Empty
+        }
+
+        Dim attribute As CustomAttribute
+        If attributes.TryGetValue(AttributeName, attribute) Then
+            Dim value As CustomAttributeValue(Of String) = attribute.DecodeValue(New AttributeValueTypeProvider())
+            data.Name = If(TryCast(value.FixedArguments(0).Value, String), String.Empty)
+
+            Dim identifier As String = Nothing
+            Dim version As Version = Nothing
+            Dim profile As String = Nothing
+            If AssemblyInfo.TryParseFrameworkName(data.Name, identifier, version, profile) Then
+                data.Identifier = identifier
+                data.Version = version
+                data.DisplayName = AssemblyInfo.GetFrameworkDisplayName(identifier, version, profile)
+            End If
+
+            ' Prefer the display name chosen by the compiler/SDK, when present.
+            For Each namedArgument As CustomAttributeNamedArgument(Of String) In value.NamedArguments
+                If String.Equals(namedArgument.Name, "FrameworkDisplayName", StringComparison.Ordinal) Then
+                    Dim displayName As String = TryCast(namedArgument.Value, String)
+                    If Not String.IsNullOrWhiteSpace(displayName) Then
+                        data.DisplayName = displayName
+                    End If
+                End If
+            Next namedArgument
+        End If
+
+        Select Case data.Identifier
+            Case ".NETFramework"
+                data.Kind = AssemblyFrameworkKind.NetFramework
+
+            Case ".NETCoreApp"
+                data.Kind = AssemblyFrameworkKind.NetCore
+
+            Case ".NETStandard", ".NETPortable"
+                data.Kind = AssemblyFrameworkKind.NetStandard
+
+            Case Else
+                data.Kind = AssemblyInfo.InferFrameworkKind(reader)
+                data.IsKindInferred = True
+                If data.DisplayName.Length = 0 Then
+                    data.DisplayName = AssemblyInfo.GetInferredFrameworkDisplayName(data.Kind, reader.MetadataVersion)
+                End If
+        End Select
+
+        Return data
+    End Function
+
+    ''' <summary>
+    ''' Reads the debug directory to determine the PDB information and whether the build is deterministic.
+    ''' </summary>
+    ''' <param name="peReader">
+    ''' The PE reader.
+    ''' </param>
+    ''' <returns>
+    ''' The debug directory information.
+    ''' </returns>
+    Private Shared Function ReadDebugDirectory(peReader As PEReader) As DebugDirectoryData
+
+        Dim data As New DebugDirectoryData With {.PdbPath = String.Empty}
+
+        For Each entry As DebugDirectoryEntry In peReader.ReadDebugDirectory()
+            Select Case entry.Type
+                Case DebugDirectoryEntryType.Reproducible
+                    data.IsDeterministic = True
+
+                Case DebugDirectoryEntryType.EmbeddedPortablePdb
+                    data.HasEmbeddedPdb = True
+
+                Case DebugDirectoryEntryType.CodeView
+                    If data.PdbPath.Length = 0 Then
+                        Dim codeView As CodeViewDebugDirectoryData = peReader.ReadCodeViewDebugDirectoryData(entry)
+                        data.PdbPath = If(codeView.Path, String.Empty)
+                        data.IsPortablePdb = entry.MinorVersion = AssemblyInfo.PortableCodeViewVersionMagic
+                    End If
+            End Select
+        Next entry
+
+        Return data
+    End Function
+
+    ''' <summary>
+    ''' Converts the COFF header time stamp to a <see cref="DateTimeOffset"/> (UTC).
+    ''' </summary>
+    ''' <param name="timeDateStamp">
+    ''' The COFF header time stamp: an unsigned 32-bit count of seconds since the Unix epoch.
+    ''' </param>
+    '''
+    ''' <param name="isDeterministic">
+    ''' A value that determines whether the image was produced by a deterministic build.
+    ''' </param>
+    ''' <returns>
+    ''' The time stamp (UTC), or <see langword="Nothing"/> for deterministic builds
+    ''' (where the value is a content hash, not a date).
+    ''' </returns>
+    Friend Shared Function GetTimeStamp(timeDateStamp As Integer, isDeterministic As Boolean) As DateTimeOffset?
+
+        If isDeterministic Then
+            Return Nothing
+        End If
+
+        Dim seconds As Long = CLng(timeDateStamp) And &HFFFFFFFFL
+        Return DateTimeOffset.FromUnixTimeSeconds(seconds)
+    End Function
+
+    ''' <summary>
+    ''' Reads the assemblies referenced by the assembly, sorted by name.
+    ''' </summary>
+    ''' <param name="reader">
+    ''' The metadata reader.
+    ''' </param>
+    ''' <returns>
+    ''' The referenced assembly names.
+    ''' </returns>
+    Private Shared Function ReadAssemblyReferences(reader As MetadataReader) As ReadOnlyCollection(Of AssemblyName)
+
+        Dim assemblies As New List(Of AssemblyName)
+        For Each handle As AssemblyReferenceHandle In reader.AssemblyReferences
+            Dim reference As AssemblyReference = reader.GetAssemblyReference(handle)
+            Dim name As New AssemblyName() With {
+                .Name = reader.GetString(reference.Name),
+                .Version = reference.Version,
+                .CultureName = reader.GetString(reference.Culture)
+            }
+
+            Dim keyOrToken As Byte() = reader.GetBlobBytes(reference.PublicKeyOrToken)
+            If (reference.Flags And AssemblyFlags.PublicKey) = AssemblyFlags.PublicKey Then
+                name.SetPublicKey(keyOrToken)
+                name.SetPublicKeyToken(AssemblyInfo.HexToBytes(AssemblyInfo.ComputePublicKeyToken(keyOrToken)))
+            Else
+                name.SetPublicKeyToken(keyOrToken)
+            End If
+            assemblies.Add(name)
+        Next handle
+
+        Return assemblies.OrderBy(Function(x As AssemblyName) x.Name, StringComparer.OrdinalIgnoreCase).ToList().AsReadOnly()
+    End Function
+
+    ''' <summary>
+    ''' Reads the distinct names of the native modules referenced by P/Invoke declarations, sorted by name.
+    ''' <para></para>
+    ''' Names without extension get the implicit ".dll" extension appended.
+    ''' </summary>
+    ''' <param name="reader">
+    ''' The metadata reader.
+    ''' </param>
+    ''' <returns>
+    ''' The native module names.
+    ''' </returns>
+    Private Shared Function ReadNativeModuleReferences(reader As MetadataReader) As ReadOnlyCollection(Of String)
+
+        Dim modules As New List(Of String)
+        For i As Integer = 1 To reader.GetTableRowCount(TableIndex.ModuleRef)
+            Dim handle As ModuleReferenceHandle = MetadataTokens.ModuleReferenceHandle(i)
+            Dim moduleName As String = reader.GetString(reader.GetModuleReference(handle).Name)
+
+            ' LoadLibrary appends ".dll" when the name has no extension, so "kernel32" and "kernel32.dll" are the same module.
+            If Not Path.HasExtension(moduleName) Then
+                moduleName = $"{moduleName}.dll"
+            End If
+
+            If Not modules.Contains(moduleName, StringComparer.OrdinalIgnoreCase) Then
+                modules.Add(moduleName)
+            End If
+        Next i
+
+        Return modules.OrderBy(Function(x As String) x, StringComparer.OrdinalIgnoreCase).ToList().AsReadOnly()
+    End Function
+
+#End Region
+
+#Region " Private Methods (Attributes) "
+
+    ''' <summary>
+    ''' Gets the first fixed (constructor) argument of an assembly attribute, as <see cref="String"/>.
+    ''' </summary>
+    ''' <param name="reader">
+    ''' The metadata reader.
+    ''' </param>
+    '''
+    ''' <param name="attributes">
+    ''' The assembly custom attributes.
+    ''' </param>
+    '''
+    ''' <param name="attributeName">
+    ''' The full name of the attribute type.
+    ''' </param>
+    ''' <returns>
+    ''' The argument value, or <see langword="Nothing"/> if the attribute is not present
+    ''' or its first argument is not a string.
+    ''' </returns>
+    Private Shared Function GetStringArgument(reader As MetadataReader, attributes As Dictionary(Of String, CustomAttribute), attributeName As String) As String
+
+        Dim value As Object = AssemblyInfo.GetFirstArgument(reader, attributes, attributeName)
+        Return TryCast(value, String)
+    End Function
+
+    ''' <summary>
+    ''' Gets the first fixed (constructor) argument of an assembly attribute, as <see cref="Boolean"/>.
+    ''' </summary>
+    ''' <param name="reader">
+    ''' The metadata reader.
+    ''' </param>
+    '''
+    ''' <param name="attributes">
+    ''' The assembly custom attributes.
+    ''' </param>
+    '''
+    ''' <param name="attributeName">
+    ''' The full name of the attribute type.
+    ''' </param>
+    ''' <returns>
+    ''' The argument value, or <see langword="Nothing"/> if the attribute is not present.
+    ''' </returns>
+    ''' <exception cref="BadImageFormatException">
+    ''' The first argument of the attribute is not a <see cref="Boolean"/>.
+    ''' </exception>
+    Private Shared Function GetBooleanArgument(reader As MetadataReader, attributes As Dictionary(Of String, CustomAttribute), attributeName As String) As Boolean?
+
+        If Not attributes.ContainsKey(attributeName) Then
+            Return Nothing
+        End If
+
+        Dim value As Object = AssemblyInfo.GetFirstArgument(reader, attributes, attributeName)
+        If TypeOf value IsNot Boolean Then
+            Throw New BadImageFormatException($"The first argument of '{attributeName}' is not a Boolean.")
+        End If
+        Return DirectCast(value, Boolean)
+    End Function
+
+    ''' <summary>
+    ''' Gets the first fixed (constructor) argument of an assembly attribute.
+    ''' </summary>
+    ''' <param name="reader">
+    ''' The metadata reader.
+    ''' </param>
+    '''
+    ''' <param name="attributes">
+    ''' The assembly custom attributes.
+    ''' </param>
+    '''
+    ''' <param name="attributeName">
+    ''' The full name of the attribute type.
+    ''' </param>
+    ''' <returns>
+    ''' The argument value, or <see langword="Nothing"/> if the attribute is not present or has no fixed arguments.
+    ''' </returns>
+    Private Shared Function GetFirstArgument(reader As MetadataReader, attributes As Dictionary(Of String, CustomAttribute), attributeName As String) As Object
+
+        Dim attribute As CustomAttribute
+        If Not attributes.TryGetValue(attributeName, attribute) Then
+            Return Nothing
+        End If
+
+        Dim value As CustomAttributeValue(Of String) = attribute.DecodeValue(New AttributeValueTypeProvider())
+        Return If(value.FixedArguments.Length = 0, Nothing, value.FixedArguments(0).Value)
+    End Function
+
+    ''' <summary>
+    ''' Gets the value of the assembly <see cref="DefaultDllImportSearchPathsAttribute"/>.
+    ''' </summary>
+    ''' <param name="reader">
+    ''' The metadata reader.
+    ''' </param>
+    '''
+    ''' <param name="attributes">
+    ''' The assembly custom attributes.
+    ''' </param>
+    ''' <returns>
+    ''' The search paths, or <see langword="Nothing"/> if the attribute is not present.
+    ''' </returns>
+    Private Shared Function GetDllImportSearchPaths(reader As MetadataReader, attributes As Dictionary(Of String, CustomAttribute)) As DllImportSearchPath?
+
+        Dim value As Object = AssemblyInfo.GetFirstArgument(reader, attributes, "System.Runtime.InteropServices.DefaultDllImportSearchPathsAttribute")
+        If value Is Nothing Then
+            Return Nothing
+        End If
+        Return CType(Convert.ToInt32(value, CultureInfo.InvariantCulture), DllImportSearchPath)
+    End Function
+
+    ''' <summary>
+    ''' Determines whether JIT optimizations are enabled, according to the assembly <see cref="DebuggableAttribute"/>.
+    ''' </summary>
+    ''' <param name="reader">
+    ''' The metadata reader.
+    ''' </param>
+    '''
+    ''' <param name="attributes">
+    ''' The assembly custom attributes.
+    ''' </param>
+    ''' <returns>
+    ''' <see langword="True"/> if JIT optimizations are enabled (also when the attribute is not present);
+    ''' otherwise, <see langword="False"/>.
+    ''' </returns>
+    Private Shared Function GetIsOptimized(reader As MetadataReader, attributes As Dictionary(Of String, CustomAttribute)) As Boolean
+
+        Dim attribute As CustomAttribute
+        If Not attributes.TryGetValue("System.Diagnostics.DebuggableAttribute", attribute) Then
+            Return True
+        End If
+
+        Dim value As CustomAttributeValue(Of String) = attribute.DecodeValue(New AttributeValueTypeProvider())
+        Select Case value.FixedArguments.Length
+            Case 1 ' DebuggableAttribute(DebuggingModes modes)
+                Dim modes As Integer = Convert.ToInt32(value.FixedArguments(0).Value, CultureInfo.InvariantCulture)
+                Return (modes And AssemblyInfo.DebuggingModesDisableOptimizations) = 0
+
+            Case 2 ' DebuggableAttribute(bool isJITTrackingEnabled, bool isJITOptimizerDisabled)
+                Return Not CBool(value.FixedArguments(1).Value)
+
+            Case Else
+                Throw New BadImageFormatException("Unexpected DebuggableAttribute constructor.")
+        End Select
+    End Function
+
+#End Region
+
+#Region " Private Methods (Helpers) "
+
+    ''' <summary>
+    ''' Gets the strong-name signature state of the assembly.
+    ''' </summary>
+    ''' <param name="reader">
+    ''' The metadata reader.
+    ''' </param>
+    '''
+    ''' <param name="flags">
+    ''' The CLI header flags.
+    ''' </param>
+    ''' <returns>
+    ''' The strong-name signature state.
+    ''' </returns>
+    Private Shared Function GetStrongNameSignature(reader As MetadataReader, flags As CorFlags) As StrongNameSignatureKind
+
+        If reader.GetAssemblyDefinition().PublicKey.IsNil Then
+            Return StrongNameSignatureKind.NotSigned
+        End If
+        Return If((flags And CorFlags.StrongNameSigned) = CorFlags.StrongNameSigned,
+                  StrongNameSignatureKind.Signed,
+                  StrongNameSignatureKind.DelaySigned)
+    End Function
+
+    ''' <summary>
+    ''' Gets the full name of the managed entry-point method.
+    ''' </summary>
+    ''' <param name="reader">
+    ''' The metadata reader.
+    ''' </param>
+    '''
+    ''' <param name="corHeader">
+    ''' The CLI header.
+    ''' </param>
+    ''' <returns>
+    ''' The full name of the entry-point method, "(native code)" for a native entry point,
+    ''' or <see cref="String.Empty"/> if there is no entry point.
+    ''' </returns>
+    Private Shared Function GetEntryPointMethod(reader As MetadataReader, corHeader As CorHeader) As String
+
+        Dim tokenOrRva As Integer = corHeader.EntryPointTokenOrRelativeVirtualAddress
+        If tokenOrRva = 0 Then
             Return String.Empty
         End If
 
-        Dim publicKeyToken As New StringBuilder()
-        For i As Integer = 0 To (bytes.GetLength(0) - 1)
-            publicKeyToken.Append(String.Format("{0:x2}", bytes(i)))
-        Next i
+        If (corHeader.Flags And CorFlags.NativeEntryPoint) = CorFlags.NativeEntryPoint Then
+            Return "(native code)"
+        End If
 
-        Return publicKeyToken.ToString()
+        Dim handle As EntityHandle = MetadataTokens.EntityHandle(tokenOrRva)
+        If handle.Kind <> HandleKind.MethodDefinition Then
+            ' Multi-module assemblies can point to a File entry; there is nothing more to resolve here.
+            Return $"(metadata token 0x{tokenOrRva:X8})"
+        End If
+
+        Return MetadataReaderHelper.GetMethodFullName(reader, CType(handle, MethodDefinitionHandle))
     End Function
 
-    ''' ----------------------------------------------------------------------------------------------------
     ''' <summary>
-    ''' Tries to detect the root namespace name of the loaded assembly.
-    ''' <para></para>
-    ''' Note that an assembly does not necessarily should have defined a root namespace, 
-    ''' and also <see cref="AssemblyInfo.FindRootNamespace"/> could return a wrong root namespace name in some circumstances.
+    ''' Infers the .NET platform family from the assembly references
+    ''' (or from the assembly itself if it is a core library).
     ''' </summary>
-    ''' ----------------------------------------------------------------------------------------------------
+    ''' <param name="reader">
+    ''' The metadata reader.
+    ''' </param>
     ''' <returns>
-    ''' The resulting <see cref="XNamespace"/>.
-    ''' <para></para>
-    ''' If the root namespace is not found, the return value is <see cref="XNamespace.None"/>.
+    ''' The inferred <see cref="AssemblyFrameworkKind"/>.
     ''' </returns>
-    ''' ----------------------------------------------------------------------------------------------------
-    <DebuggerStepThrough>
-    Private Function GetRootNamespace() As XNamespace
+    Private Shared Function InferFrameworkKind(reader As MetadataReader) As AssemblyFrameworkKind
 
-        Dim resName As String = Me.assembly.GetManifestResourceNames().FirstOrDefault()
-        If String.IsNullOrEmpty(resName) Then
-            Return XNamespace.None
+        Dim ownName As String = reader.GetString(reader.GetAssemblyDefinition().Name)
+        Select Case ownName
+            Case "System.Private.CoreLib"
+                Return AssemblyFrameworkKind.NetCore
+            Case "mscorlib"
+                Return AssemblyFrameworkKind.NetFramework
+            Case "netstandard"
+                Return AssemblyFrameworkKind.NetStandard
+        End Select
+
+        Dim referencesNetCore As Boolean
+        Dim referencesNetStandard As Boolean
+        Dim referencesMscorlib As Boolean
+        Dim referencesLegacyContracts As Boolean
+
+        For Each handle As AssemblyReferenceHandle In reader.AssemblyReferences
+            Dim reference As AssemblyReference = reader.GetAssemblyReference(handle)
+            Dim name As String = reader.GetString(reference.Name)
+            Dim version As Version = reference.Version
+
+            Select Case name
+                Case "System.Private.CoreLib"
+                    referencesNetCore = True
+
+                Case "System.Runtime"
+                    ' netcoreapp2.0+ references System.Runtime >= 4.2; netstandard1.x/PCL reference 4.0.x - 4.1.x.
+                    If (version.Major >= 5) OrElse (version.Major = 4 AndAlso version.Minor >= 2) Then
+                        referencesNetCore = True
+                    Else
+                        referencesLegacyContracts = True
+                    End If
+
+                Case "netstandard"
+                    referencesNetStandard = True
+
+                Case "mscorlib"
+                    referencesMscorlib = True
+            End Select
+        Next handle
+
+        If referencesNetCore Then
+            Return AssemblyFrameworkKind.NetCore
+        ElseIf referencesNetStandard Then
+            Return AssemblyFrameworkKind.NetStandard
+        ElseIf referencesMscorlib Then
+            Return AssemblyFrameworkKind.NetFramework
+        ElseIf referencesLegacyContracts Then
+            Return AssemblyFrameworkKind.NetStandard
+        Else
+            Return AssemblyFrameworkKind.Unknown
         End If
-
-        If (resName.IndexOf(".Resources", StringComparison.OrdinalIgnoreCase) <> -1) Then
-            resName = resName.Substring(0, resName.IndexOf(".Resources", StringComparison.OrdinalIgnoreCase))
-        End If
-
-        If (resName.Equals("Resources", StringComparison.OrdinalIgnoreCase)) Then
-            Return XNamespace.None
-        End If
-
-        Do While True
-            Dim t As Global.System.Type = Me.assembly.GetType(resName, throwOnError:=False, ignoreCase:=False)
-            If (t IsNot Nothing) Then
-                If (resName.Contains("."c)) Then
-                    resName = resName.Substring(0, resName.LastIndexOf("."c))
-                Else
-                    resName = String.Empty
-                    Exit Do
-                End If
-
-            Else
-                If (resName.Contains("."c)) Then
-                    resName = resName.Substring(0, resName.LastIndexOf("."c))
-                Else
-                    Exit Do
-                End If
-
-            End If
-        Loop
-
-        Return resName
-
     End Function
 
-    ''' ----------------------------------------------------------------------------------------------------
     ''' <summary>
-    ''' Computes a hash for the specified byte array using the given hash algorithm.
+    ''' Gets a friendly name for an inferred target framework.
     ''' </summary>
-    ''' ----------------------------------------------------------------------------------------------------
-    ''' <typeparam name="T">
-    ''' The <see cref="HashAlgorithm"/> provider.
-    ''' </typeparam>
-    ''' 
+    ''' <param name="kind">
+    ''' The inferred framework kind.
+    ''' </param>
+    '''
+    ''' <param name="metadataVersion">
+    ''' The metadata version string (e.g. "v4.0.30319").
+    ''' </param>
+    ''' <returns>
+    ''' The friendly name, or <see cref="String.Empty"/> if the framework is unknown.
+    ''' </returns>
+    Private Shared Function GetInferredFrameworkDisplayName(kind As AssemblyFrameworkKind, metadataVersion As String) As String
+
+        Select Case kind
+            Case AssemblyFrameworkKind.NetFramework
+                If metadataVersion.StartsWith("v1.", StringComparison.OrdinalIgnoreCase) Then
+                    Return ".NET Framework 1.x (inferred)"
+                ElseIf metadataVersion.StartsWith("v2.", StringComparison.OrdinalIgnoreCase) Then
+                    Return ".NET Framework 2.0 - 3.5 (inferred)"
+                Else
+                    Return ".NET Framework 4.x (inferred)"
+                End If
+
+            Case AssemblyFrameworkKind.NetCore
+                Return ".NET Core / .NET (inferred)"
+
+            Case AssemblyFrameworkKind.NetStandard
+                Return ".NET Standard (inferred)"
+
+            Case Else
+                Return String.Empty
+        End Select
+    End Function
+
+    ''' <summary>
+    ''' Formats a framework version for display (e.g. 4.8 -> "4.8"; 4.8.1 -> "4.8.1"; 8.0 -> "8.0").
+    ''' </summary>
+    ''' <param name="version">
+    ''' The version. It can be <see langword="Nothing"/>.
+    ''' </param>
+    ''' <returns>
+    ''' The formatted version, or <see cref="String.Empty"/> if <paramref name="version"/> is null.
+    ''' </returns>
+    Private Shared Function FormatFrameworkVersion(version As Version) As String
+
+        If version Is Nothing Then
+            Return String.Empty
+        End If
+        Return If(version.Build > 0, version.ToString(3), version.ToString(2))
+    End Function
+
+    ''' <summary>
+    ''' Formats a platform name for display, separating the OS name and its version (e.g. "Windows7.0" -> "Windows 7.0").
+    ''' </summary>
+    ''' <param name="platformName">
+    ''' The platform name. It can be <see langword="Nothing"/>.
+    ''' </param>
+    ''' <returns>
+    ''' The formatted platform name, or <see cref="String.Empty"/>.
+    ''' </returns>
+    Private Shared Function FormatPlatformName(platformName As String) As String
+
+        If String.IsNullOrWhiteSpace(platformName) Then
+            Return String.Empty
+        End If
+
+        Dim trimmed As String = platformName.Trim()
+        Dim digitIndex As Integer = trimmed.IndexOfAny("0123456789".ToCharArray())
+        If digitIndex <= 0 Then
+            Return trimmed
+        End If
+
+        Dim osName As String = trimmed.Substring(0, digitIndex)
+        If Char.IsLower(osName(0)) Then
+            osName = $"{Char.ToUpperInvariant(osName(0))}{osName.Substring(1)}"
+        End If
+        Return $"{osName} {trimmed.Substring(digitIndex)}"
+    End Function
+
+    ''' <summary>
+    ''' Detects the root namespace of the assembly.
+    ''' </summary>
+    ''' <param name="reader">
+    ''' The metadata reader.
+    ''' </param>
+    ''' <returns>
+    ''' The detected root namespace, or <see cref="String.Empty"/>.
+    ''' </returns>
+    ''' <remarks>
+    ''' Strategies, by priority:
+    ''' <list type="number">
+    '''   <item><description>VB.NET "My" types (<c>[Root].My.MyApplication</c>, <c>[Root].My.Resources.Resources</c>, ...).</description></item>
+    '''   <item><description>C# "Properties" types (<c>[Root].Properties.Resources</c>, <c>[Root].Properties.Settings</c>).</description></item>
+    '''   <item><description>The longest common namespace of all the top-level user types.</description></item>
+    ''' </list>
+    ''' </remarks>
+    Private Shared Function DetectRootNamespace(reader As MetadataReader) As String
+
+        Dim vbMyTypeNames As String() = {"MyApplication", "MyComputer", "MyProject", "MySettings", "MySettingsProperty"}
+        Dim csPropertiesTypeNames As String() = {"Resources", "Settings"}
+        Dim ignoredNamespacePrefixes As String() = {"Microsoft.CodeAnalysis", "System.Runtime.CompilerServices", "System.Diagnostics.CodeAnalysis"}
+
+        Dim userNamespaces As New List(Of String)
+
+        For Each handle As TypeDefinitionHandle In reader.TypeDefinitions
+            Dim definition As TypeDefinition = reader.GetTypeDefinition(handle)
+            If Not definition.GetDeclaringType().IsNil Then
+                Continue For ' Nested type.
+            End If
+
+            Dim typeName As String = reader.GetString(definition.Name)
+            Dim namespaceName As String = reader.GetString(definition.Namespace)
+            If typeName.StartsWith("<", StringComparison.Ordinal) Then
+                Continue For ' <Module>, <PrivateImplementationDetails>, etc.
+            End If
+
+            ' VB.NET: [Root].My.MyApplication, [Root].My.Resources.Resources
+            If vbMyTypeNames.Contains(typeName) Then
+                Dim root As String = Nothing
+                If AssemblyInfo.TryStripNamespaceSuffix(namespaceName, "My", root) Then
+                    Return root
+                End If
+            End If
+            If typeName = "Resources" Then
+                Dim root As String = Nothing
+                If AssemblyInfo.TryStripNamespaceSuffix(namespaceName, "My.Resources", root) Then
+                    Return root
+                End If
+            End If
+
+            ' C#: [Root].Properties.Resources, [Root].Properties.Settings
+            If csPropertiesTypeNames.Contains(typeName) Then
+                Dim root As String = Nothing
+                If AssemblyInfo.TryStripNamespaceSuffix(namespaceName, "Properties", root) Then
+                    Return root
+                End If
+            End If
+
+            If (namespaceName.Length <> 0) AndAlso
+               Not ignoredNamespacePrefixes.Any(Function(prefix As String) namespaceName.StartsWith(prefix, StringComparison.Ordinal)) Then
+                userNamespaces.Add(namespaceName)
+            End If
+        Next handle
+
+        Return AssemblyInfo.GetCommonNamespace(userNamespaces)
+    End Function
+
+    ''' <summary>
+    ''' Removes a namespace suffix (e.g. "My" from "Root.My").
+    ''' </summary>
+    ''' <param name="namespaceName">
+    ''' The namespace name.
+    ''' </param>
+    '''
+    ''' <param name="suffix">
+    ''' The suffix to remove.
+    ''' </param>
+    '''
+    ''' <param name="root">
+    ''' When this method returns, contains the namespace without the suffix
+    ''' (<see cref="String.Empty"/> if the namespace was exactly the suffix).
+    ''' </param>
+    ''' <returns>
+    ''' <see langword="True"/> if the namespace ends with the suffix; otherwise, <see langword="False"/>.
+    ''' </returns>
+    Private Shared Function TryStripNamespaceSuffix(namespaceName As String, suffix As String, ByRef root As String) As Boolean
+
+        If String.Equals(namespaceName, suffix, StringComparison.Ordinal) Then
+            root = String.Empty
+            Return True
+        End If
+
+        If namespaceName.EndsWith($".{suffix}", StringComparison.Ordinal) Then
+            root = namespaceName.Substring(0, namespaceName.Length - suffix.Length - 1)
+            Return True
+        End If
+
+        root = Nothing
+        Return False
+    End Function
+
+    ''' <summary>
+    ''' Gets the longest common namespace (whole segments) of the specified namespaces.
+    ''' </summary>
+    ''' <param name="namespaces">
+    ''' The namespaces.
+    ''' </param>
+    ''' <returns>
+    ''' The longest common namespace, or <see cref="String.Empty"/> if there is none.
+    ''' </returns>
+    Private Shared Function GetCommonNamespace(namespaces As List(Of String)) As String
+
+        If namespaces.Count = 0 Then
+            Return String.Empty
+        End If
+
+        Dim common As String() = namespaces(0).Split("."c)
+        Dim commonLength As Integer = common.Length
+
+        For Each namespaceName As String In namespaces
+            Dim segments As String() = namespaceName.Split("."c)
+            Dim length As Integer = Math.Min(commonLength, segments.Length)
+            Dim matched As Integer = 0
+            While (matched < length) AndAlso String.Equals(common(matched), segments(matched), StringComparison.Ordinal)
+                matched += 1
+            End While
+            commonLength = matched
+            If commonLength = 0 Then
+                Return String.Empty
+            End If
+        Next namespaceName
+
+        Return String.Join(".", common, 0, commonLength)
+    End Function
+
+    ''' <summary>
+    ''' Parses a GUID string.
+    ''' </summary>
+    ''' <param name="value">
+    ''' The GUID string. It can be <see langword="Nothing"/>.
+    ''' </param>
+    ''' <returns>
+    ''' The parsed <see cref="System.Guid"/>, or <see langword="Nothing"/> if the value is null or not a valid GUID.
+    ''' </returns>
+    Private Shared Function ParseGuid(value As String) As Guid?
+
+        Dim result As Guid
+        Return If(System.Guid.TryParse(value, result), result, CType(Nothing, Guid?))
+    End Function
+
+    ''' <summary>
+    ''' Creates a <see cref="CultureInfo"/> from a culture name declared in the assembly.
+    ''' </summary>
+    ''' <param name="cultureName">
+    ''' The culture name.
+    ''' </param>
+    ''' <returns>
+    ''' The <see cref="CultureInfo"/>, or <see langword="Nothing"/> if the name is empty or not a known culture.
+    ''' </returns>
+    Private Shared Function TryCreateCulture(cultureName As String) As CultureInfo
+
+        If String.IsNullOrWhiteSpace(cultureName) Then
+            Return Nothing
+        End If
+
+        Try
+            Return CultureInfo.GetCultureInfo(cultureName)
+
+        Catch ex As CultureNotFoundException
+            ' The name comes from an arbitrary file; it is still exposed raw through 'NeutralResourcesLanguage'.
+            Return Nothing
+
+        End Try
+    End Function
+
+    ''' <summary>
+    ''' Computes the public key token (last 8 bytes of the SHA-1 hash, reversed) of a public key.
+    ''' </summary>
+    ''' <param name="publicKey">
+    ''' The public key.
+    ''' </param>
+    ''' <returns>
+    ''' The public key token (lowercase hexadecimal), or <see cref="String.Empty"/> if the key is empty.
+    ''' </returns>
+    Friend Shared Function ComputePublicKeyToken(publicKey As Byte()) As String
+
+        If (publicKey Is Nothing) OrElse (publicKey.Length = 0) Then
+            Return String.Empty
+        End If
+
+        Dim hash As Byte()
+        Using sha As SHA1 = SHA1.Create()
+            hash = sha.ComputeHash(publicKey)
+        End Using
+
+        Dim sb As New StringBuilder(capacity:=16)
+        For i As Integer = hash.Length - 1 To hash.Length - 8 Step -1
+            sb.Append(hash(i).ToString("x2", CultureInfo.InvariantCulture))
+        Next i
+        Return sb.ToString()
+    End Function
+
+    ''' <summary>
+    ''' Converts an hexadecimal string to a byte array.
+    ''' </summary>
+    ''' <param name="hex">
+    ''' The hexadecimal string.
+    ''' </param>
+    ''' <returns>
+    ''' The byte array.
+    ''' </returns>
+    Private Shared Function HexToBytes(hex As String) As Byte()
+
+        Dim bytes As Byte() = New Byte((hex.Length \ 2) - 1) {}
+        For i As Integer = 0 To bytes.Length - 1
+            bytes(i) = Convert.ToByte(hex.Substring(i * 2, 2), 16)
+        Next i
+        Return bytes
+    End Function
+
+    ''' <summary>
+    ''' Computes a hash for the specified byte array, and disposes the hash algorithm.
+    ''' </summary>
+    ''' <param name="algorithm">
+    ''' The hash algorithm.
+    ''' </param>
+    '''
     ''' <param name="data">
     ''' The byte array.
     ''' </param>
-    ''' ----------------------------------------------------------------------------------------------------
     ''' <returns>
-    ''' An Hexadecimal representation of the resulting hash value.
+    ''' An uppercase hexadecimal representation of the resulting hash value.
     ''' </returns>
-    ''' ----------------------------------------------------------------------------------------------------
     <DebuggerStepThrough>
-    Private Function ComputeHashOfData(Of T As HashAlgorithm)(data As Byte()) As String
+    Private Shared Function ComputeHash(algorithm As HashAlgorithm, data As Byte()) As String
 
-        Using algorithm As HashAlgorithm = DirectCast(Activator.CreateInstance(GetType(T)), HashAlgorithm)
-
+        Using algorithm
             Dim hash As Byte() = algorithm.ComputeHash(data)
-            Dim sb As New StringBuilder(capacity:=hash.Length)
-
+            Dim sb As New StringBuilder(capacity:=hash.Length * 2)
             For Each b As Byte In hash
-                sb.Append(b.ToString("X2"))
+                sb.Append(b.ToString("X2", CultureInfo.InvariantCulture))
             Next b
-
             Return sb.ToString()
         End Using
+    End Function
 
+#End Region
+
+#Region " Private Methods (GAC) "
+
+    ''' <summary>
+    ''' Gets the assembly display name used to query the Global Assembly Cache (GAC).
+    ''' </summary>
+    ''' <returns>
+    ''' The assembly display name, including the processor architecture when known.
+    ''' </returns>
+    Private Function GetGacQueryName() As String
+
+        If Me.ProcessorArchitecture = ProcessorArchitecture.None Then
+            Return Me.FullName
+        End If
+        Return $"{Me.FullName}, ProcessorArchitecture={Me.ProcessorArchitecture.ToString().ToUpperInvariant()}"
+    End Function
+
+    ''' <summary>
+    ''' Queries the Global Assembly Cache (GAC) once, and caches the result.
+    ''' </summary>
+    Private Sub EnsureGacQueried()
+
+        If Me.isGacQueried Then
+            Return
+        End If
+
+        Me.gacPathB = Nothing
+        If (Me.FrameworkKind = AssemblyFrameworkKind.NetFramework) AndAlso
+           (Me.PublicKeyToken.Length <> 0) AndAlso
+           RuntimeInformation.IsOSPlatform(OSPlatform.Windows) Then
+
+            Me.gacPathB = AssemblyInfo.QueryGacPath(Me.GetGacQueryName())
+        End If
+
+        Me.isGacQueried = True
+    End Sub
+
+    ''' <summary>
+    ''' Queries the Global Assembly Cache (GAC) for the specified assembly.
+    ''' </summary>
+    ''' <param name="gacQueryName">
+    ''' The assembly display name.
+    ''' </param>
+    ''' <returns>
+    ''' The path of the assembly inside the GAC, or <see langword="Nothing"/> if it is not installed in the GAC.
+    ''' </returns>
+    <DebuggerStepThrough>
+    Private Shared Function QueryGacPath(gacQueryName As String) As String
+
+        Const BufferLength As Integer = 1024
+
+        Dim assemblyCache As IAssemblyCache = Nothing
+        Dim hResult As Integer = NativeMethods.CreateAssemblyCache(assemblyCache, 0)
+        If hResult <> 0 Then
+            Marshal.ThrowExceptionForHR(hResult)
+        End If
+
+        Try
+            Dim nativeInfo As New NativeAssemblyInfo With {
+                .Size = Marshal.SizeOf(GetType(NativeAssemblyInfo)),
+                .AssemblyFlags = AssemblyInfoFlags.AssemblyinfoFlagInstalled,
+                .CharBuffer = BufferLength,
+                .CurrentAssemblyPath = New String(ControlChars.NullChar, BufferLength)
+            }
+
+            hResult = assemblyCache.QueryAssemblyInfo(QueryAssemblyInfoFlags.QueryAsmInfoValidate, gacQueryName, nativeInfo)
+            If hResult <> 0 Then
+                ' Typically HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND): the assembly is not installed in the GAC.
+                Return Nothing
+            End If
+
+            Dim path As String = If(nativeInfo.CurrentAssemblyPath, String.Empty).TrimEnd(ControlChars.NullChar)
+            ' Installed, but the path could not be retrieved: still report it as installed.
+            Return If(path.Length = 0, String.Empty, path)
+
+        Finally
+            Marshal.ReleaseComObject(assemblyCache)
+
+        End Try
     End Function
 
 #End Region

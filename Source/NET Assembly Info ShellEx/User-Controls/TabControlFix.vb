@@ -16,22 +16,18 @@ Imports System.Windows.Forms
 
 Namespace Usercontrols
 
-    ''' ----------------------------------------------------------------------------------------------------
     ''' <summary>
     ''' A custom tabcontrol that fixes a Explorer.exe crash that occurs when using SharpShell v2.7.0 (and previous versions).
     ''' <para></para>
     ''' See the issue for more details: https://github.com/dwmkerr/sharpshell/issues/233
     ''' </summary>
-    ''' ----------------------------------------------------------------------------------------------------
     Public NotInheritable Class TabControlFix : Inherits TabControl
 
 #Region " Constructors "
 
-        ''' ----------------------------------------------------------------------------------------------------
         ''' <summary>
         ''' Initializes a new instance of the <see cref="TabControlFix"/> class.
         ''' </summary>
-        ''' ----------------------------------------------------------------------------------------------------
         Public Sub New()
             ' This is the fix.
             Me.SetStyle(ControlStyles.ContainerControl, value:=True)

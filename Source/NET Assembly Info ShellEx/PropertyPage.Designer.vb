@@ -21,6 +21,7 @@ Partial Class PropertyPage : Inherits SharpPropertyPage
         Me.components = New System.ComponentModel.Container()
         Me.ContextMenuStripListView = New System.Windows.Forms.ContextMenuStrip(Me.components)
         Me.CopyToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
+        Me.CopyValueToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
         Me.TableLayoutPanelMain = New System.Windows.Forms.TableLayoutPanel()
         Me.PanelBottom = New System.Windows.Forms.Panel()
         Me.ButtonSave = New System.Windows.Forms.Button()
@@ -37,6 +38,10 @@ Partial Class PropertyPage : Inherits SharpPropertyPage
         Me.ListViewIdentity = New System.Windows.Forms.ListView()
         Me.ColumnHeader5 = CType(New System.Windows.Forms.ColumnHeader(), System.Windows.Forms.ColumnHeader)
         Me.ColumnHeader6 = CType(New System.Windows.Forms.ColumnHeader(), System.Windows.Forms.ColumnHeader)
+        Me.TabPageReferences = New System.Windows.Forms.TabPage()
+        Me.ListViewReferences = New System.Windows.Forms.ListView()
+        Me.ColumnHeader3 = CType(New System.Windows.Forms.ColumnHeader(), System.Windows.Forms.ColumnHeader)
+        Me.ColumnHeader4 = CType(New System.Windows.Forms.ColumnHeader(), System.Windows.Forms.ColumnHeader)
         Me.ContextMenuStripListView.SuspendLayout()
         Me.TableLayoutPanelMain.SuspendLayout()
         Me.PanelBottom.SuspendLayout()
@@ -44,20 +49,28 @@ Partial Class PropertyPage : Inherits SharpPropertyPage
         Me.TabPageProduct.SuspendLayout()
         Me.TabPageBuild.SuspendLayout()
         Me.TabPageIdentity.SuspendLayout()
+        Me.TabPageReferences.SuspendLayout()
         Me.SuspendLayout()
         '
         'ContextMenuStripListView
         '
-        Me.ContextMenuStripListView.Items.AddRange(New System.Windows.Forms.ToolStripItem() {Me.CopyToolStripMenuItem})
+        Me.ContextMenuStripListView.Items.AddRange(New System.Windows.Forms.ToolStripItem() {Me.CopyToolStripMenuItem, Me.CopyValueToolStripMenuItem})
         Me.ContextMenuStripListView.Name = "ContextMenuStrip1"
-        Me.ContextMenuStripListView.Size = New System.Drawing.Size(102, 26)
+        Me.ContextMenuStripListView.Size = New System.Drawing.Size(134, 48)
         '
         'CopyToolStripMenuItem
         '
         Me.CopyToolStripMenuItem.Image = Global.My.Resources.Resources.Copy
         Me.CopyToolStripMenuItem.Name = "CopyToolStripMenuItem"
-        Me.CopyToolStripMenuItem.Size = New System.Drawing.Size(101, 22)
+        Me.CopyToolStripMenuItem.Size = New System.Drawing.Size(133, 22)
         Me.CopyToolStripMenuItem.Text = "Copy"
+        '
+        'CopyValueToolStripMenuItem
+        '
+        Me.CopyValueToolStripMenuItem.Image = Global.My.Resources.Resources.Copy
+        Me.CopyValueToolStripMenuItem.Name = "CopyValueToolStripMenuItem"
+        Me.CopyValueToolStripMenuItem.Size = New System.Drawing.Size(133, 22)
+        Me.CopyValueToolStripMenuItem.Text = "Copy Value"
         '
         'TableLayoutPanelMain
         '
@@ -99,6 +112,7 @@ Partial Class PropertyPage : Inherits SharpPropertyPage
         Me.TabControlListViews.Controls.Add(Me.TabPageProduct)
         Me.TabControlListViews.Controls.Add(Me.TabPageBuild)
         Me.TabControlListViews.Controls.Add(Me.TabPageIdentity)
+        Me.TabControlListViews.Controls.Add(Me.TabPageReferences)
         Me.TabControlListViews.Dock = System.Windows.Forms.DockStyle.Fill
         Me.TabControlListViews.Location = New System.Drawing.Point(3, 3)
         Me.TabControlListViews.Name = "TabControlListViews"
@@ -125,6 +139,7 @@ Partial Class PropertyPage : Inherits SharpPropertyPage
         Me.ListViewProduct.HeaderStyle = System.Windows.Forms.ColumnHeaderStyle.Nonclickable
         Me.ListViewProduct.Location = New System.Drawing.Point(0, 0)
         Me.ListViewProduct.Name = "ListViewProduct"
+        Me.ListViewProduct.ShowItemToolTips = True
         Me.ListViewProduct.Size = New System.Drawing.Size(325, 350)
         Me.ListViewProduct.TabIndex = 34
         Me.ListViewProduct.UseCompatibleStateImageBehavior = False
@@ -159,6 +174,7 @@ Partial Class PropertyPage : Inherits SharpPropertyPage
         Me.ListViewBuild.HeaderStyle = System.Windows.Forms.ColumnHeaderStyle.Nonclickable
         Me.ListViewBuild.Location = New System.Drawing.Point(0, 0)
         Me.ListViewBuild.Name = "ListViewBuild"
+        Me.ListViewBuild.ShowItemToolTips = True
         Me.ListViewBuild.Size = New System.Drawing.Size(325, 350)
         Me.ListViewBuild.TabIndex = 40
         Me.ListViewBuild.UseCompatibleStateImageBehavior = False
@@ -193,6 +209,7 @@ Partial Class PropertyPage : Inherits SharpPropertyPage
         Me.ListViewIdentity.HeaderStyle = System.Windows.Forms.ColumnHeaderStyle.Nonclickable
         Me.ListViewIdentity.Location = New System.Drawing.Point(0, 0)
         Me.ListViewIdentity.Name = "ListViewIdentity"
+        Me.ListViewIdentity.ShowItemToolTips = True
         Me.ListViewIdentity.Size = New System.Drawing.Size(325, 350)
         Me.ListViewIdentity.TabIndex = 39
         Me.ListViewIdentity.UseCompatibleStateImageBehavior = False
@@ -207,6 +224,41 @@ Partial Class PropertyPage : Inherits SharpPropertyPage
         '
         Me.ColumnHeader6.Text = "Value"
         Me.ColumnHeader6.Width = 180
+        '
+        'TabPageReferences
+        '
+        Me.TabPageReferences.Controls.Add(Me.ListViewReferences)
+        Me.TabPageReferences.Location = New System.Drawing.Point(4, 22)
+        Me.TabPageReferences.Name = "TabPageReferences"
+        Me.TabPageReferences.Size = New System.Drawing.Size(325, 350)
+        Me.TabPageReferences.TabIndex = 4
+        Me.TabPageReferences.Text = "References"
+        Me.TabPageReferences.UseVisualStyleBackColor = True
+        '
+        'ListViewReferences
+        '
+        Me.ListViewReferences.Columns.AddRange(New System.Windows.Forms.ColumnHeader() {Me.ColumnHeader3, Me.ColumnHeader4})
+        Me.ListViewReferences.ContextMenuStrip = Me.ContextMenuStripListView
+        Me.ListViewReferences.Dock = System.Windows.Forms.DockStyle.Fill
+        Me.ListViewReferences.FullRowSelect = True
+        Me.ListViewReferences.HeaderStyle = System.Windows.Forms.ColumnHeaderStyle.Nonclickable
+        Me.ListViewReferences.Location = New System.Drawing.Point(0, 0)
+        Me.ListViewReferences.Name = "ListViewReferences"
+        Me.ListViewReferences.ShowItemToolTips = True
+        Me.ListViewReferences.Size = New System.Drawing.Size(325, 350)
+        Me.ListViewReferences.TabIndex = 41
+        Me.ListViewReferences.UseCompatibleStateImageBehavior = False
+        Me.ListViewReferences.View = System.Windows.Forms.View.Details
+        '
+        'ColumnHeader3
+        '
+        Me.ColumnHeader3.Text = "Name"
+        Me.ColumnHeader3.Width = 130
+        '
+        'ColumnHeader4
+        '
+        Me.ColumnHeader4.Text = "Version"
+        Me.ColumnHeader4.Width = 180
         '
         'PropertyPage
         '
@@ -223,6 +275,7 @@ Partial Class PropertyPage : Inherits SharpPropertyPage
         Me.TabPageProduct.ResumeLayout(False)
         Me.TabPageBuild.ResumeLayout(False)
         Me.TabPageIdentity.ResumeLayout(False)
+        Me.TabPageReferences.ResumeLayout(False)
         Me.ResumeLayout(False)
 
     End Sub
@@ -244,5 +297,10 @@ Partial Class PropertyPage : Inherits SharpPropertyPage
     Friend WithEvents ListViewIdentity As Windows.Forms.ListView
     Friend WithEvents ColumnHeader5 As Windows.Forms.ColumnHeader
     Friend WithEvents ColumnHeader6 As Windows.Forms.ColumnHeader
+    Friend WithEvents CopyValueToolStripMenuItem As Windows.Forms.ToolStripMenuItem
+    Friend WithEvents TabPageReferences As Windows.Forms.TabPage
+    Friend WithEvents ListViewReferences As Windows.Forms.ListView
+    Friend WithEvents ColumnHeader3 As Windows.Forms.ColumnHeader
+    Friend WithEvents ColumnHeader4 As Windows.Forms.ColumnHeader
 End Class
 
