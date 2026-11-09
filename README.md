@@ -21,7 +21,7 @@ winforms
 ------------------
 
  <div align="center">
-  <img src="/Images/App.ico" width="80" alt="Logo">
+  <img src="/Images/App1.ico" width="80" alt="Logo">  <img src="/Images/App2.ico" width="80" alt="Logo">
   
   <h1>.NET Assembly Info Shell-Extension for Windows</h1>
 
