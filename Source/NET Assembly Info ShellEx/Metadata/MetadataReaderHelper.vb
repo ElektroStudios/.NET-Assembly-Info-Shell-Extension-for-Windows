@@ -156,6 +156,40 @@ Namespace AssemblyInspection
         End Function
 
         ''' <summary>
+        ''' Gets all the custom attributes applied to the assembly definition, grouped by attribute type full name
+        ''' (attribute types applied more than once, like AssemblyMetadataAttribute, keep every instance in declaration order).
+        ''' </summary>
+        ''' <param name="reader">
+        ''' The metadata reader.
+        ''' </param>
+        ''' <returns>
+        ''' A dictionary of attribute type full name and the list of its instances.
+        ''' </returns>
+        <DebuggerStepThrough>
+        Friend Function GetAllAssemblyAttributes(reader As MetadataReader) As Dictionary(Of String, List(Of CustomAttribute))
+
+            MetadataReaderHelper.ThrowIfNull(reader, NameOf(reader))
+
+            Dim attributes As New Dictionary(Of String, List(Of CustomAttribute))(StringComparer.Ordinal)
+            For Each handle As CustomAttributeHandle In reader.GetAssemblyDefinition().GetCustomAttributes()
+                Dim attribute As CustomAttribute = reader.GetCustomAttribute(handle)
+                Dim typeName As String = MetadataReaderHelper.GetAttributeTypeFullName(reader, attribute)
+                If typeName.Length = 0 Then
+                    Continue For
+                End If
+
+                Dim instances As List(Of CustomAttribute) = Nothing
+                If Not attributes.TryGetValue(typeName, instances) Then
+                    instances = New List(Of CustomAttribute)
+                    attributes.Add(typeName, instances)
+                End If
+                instances.Add(attribute)
+            Next handle
+
+            Return attributes
+        End Function
+
+        ''' <summary>
         ''' Gets the custom attributes applied to the assembly definition, keyed by attribute type full name.
         ''' <para></para>
         ''' When an attribute type is applied more than once, only the first occurrence is kept.

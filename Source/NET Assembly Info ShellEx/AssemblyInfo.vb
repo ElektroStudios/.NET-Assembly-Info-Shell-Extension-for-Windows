@@ -395,6 +395,81 @@ Public NotInheritable Class AssemblyInfo
         End Get
     End Property
 
+    ''' <summary>
+    ''' Gets the single-file bundle, when the file is a .NET single-file bundle (the assembly information
+    ''' is then read from the main assembly embedded in it); otherwise, <see langword="Nothing"/>.
+    ''' </summary>
+    Public ReadOnly Property Bundle As SingleFileBundle
+
+    ''' <summary>
+    ''' Gets the bundle entry of the main assembly, when the file is a single-file bundle; otherwise, <see langword="Nothing"/>.
+    ''' </summary>
+    Public ReadOnly Property BundleMainAssembly As BundleEntry
+
+    ''' <summary>
+    ''' Gets the platform of the native host executable, when the file is a single-file bundle;
+    ''' otherwise, <see cref="String.Empty"/>.
+    ''' </summary>
+    Public ReadOnly Property BundleHostPlatform As String
+
+    ''' <summary>
+    ''' Gets the Win32 application manifest embedded in the file, or <see langword="Nothing"/> if there is none.
+    ''' </summary>
+    Public ReadOnly Property Win32Manifest As Win32ManifestInfo
+
+    ''' <summary>
+    ''' Gets the configuration files of the assembly: its sidecar files (app.config, runtimeconfig.json, deps.json)
+    ''' or the ones embedded in its single-file bundle.
+    ''' </summary>
+    Public ReadOnly Property ConfigurationFiles As ReadOnlyCollection(Of ConfigurationFile)
+
+    ''' <summary>
+    ''' Gets the settings of the .NET Framework application configuration file, or <see langword="Nothing"/> if there is none.
+    ''' </summary>
+    Public ReadOnly Property AppConfig As AppConfigInfo
+
+    ''' <summary>
+    ''' Gets the settings of the runtimeconfig.json file, or <see langword="Nothing"/> if there is none.
+    ''' </summary>
+    Public ReadOnly Property RuntimeConfig As RuntimeConfigInfo
+
+    ''' <summary>
+    ''' Gets the key/value pairs of the <c>AssemblyMetadataAttribute</c> instances (e.g. RepositoryUrl), in declaration order.
+    ''' </summary>
+    Public ReadOnly Property AssemblyMetadata As ReadOnlyCollection(Of KeyValuePair(Of String, String))
+
+    ''' <summary>
+    ''' Gets the friend assemblies declared with <c>InternalsVisibleToAttribute</c>.
+    ''' </summary>
+    Public ReadOnly Property InternalsVisibleTo As ReadOnlyCollection(Of String)
+
+    ''' <summary>
+    ''' Gets the value of the <c>AssemblyKeyFileAttribute</c>, or <see cref="String.Empty"/>.
+    ''' </summary>
+    Public ReadOnly Property KeyFile As String
+
+    ''' <summary>
+    ''' Gets the value of the <c>AssemblyKeyNameAttribute</c> (key container), or <see cref="String.Empty"/>.
+    ''' </summary>
+    Public ReadOnly Property KeyName As String
+
+    ''' <summary>
+    ''' Gets the value of the <c>AssemblyDelaySignAttribute</c>, or <see langword="Nothing"/> if it is not present.
+    ''' </summary>
+    Public ReadOnly Property DelaySign As Boolean?
+
+    ''' <summary>
+    ''' Gets the value of the <c>AssemblyMetadata("IsTrimmable", ...)</c> attribute written by the .NET SDK
+    ''' for trimming-compatible libraries, or <see langword="Nothing"/> if it is not present.
+    ''' </summary>
+    Public ReadOnly Property IsTrimmable As Boolean?
+
+    ''' <summary>
+    ''' Gets the classes with an explicit <see cref="GuidAttribute"/> (candidate COM classes): full type name and CLSID.
+    ''' </summary>
+    Public ReadOnly Property ComClasses As ReadOnlyCollection(Of KeyValuePair(Of String, Guid))
+
+
 #End Region
 
 #Region " Private Fields "
@@ -442,12 +517,36 @@ Public NotInheritable Class AssemblyInfo
         End If
 
         Me.FilePath = filepath
-        Dim rawAssembly As Byte() = File.ReadAllBytes(filepath)
+        Dim rawFile As Byte() = File.ReadAllBytes(filepath)
+        Dim assemblyImage As Byte() = rawFile
 
-        Using stream As New MemoryStream(rawAssembly, writable:=False),
+        ' The file itself: Win32 manifest, single-file bundle detection and configuration files.
+        Using fileStream As New MemoryStream(rawFile, writable:=False)
+            Dim fileHasMetadata As Boolean
+            Using fileReader As New PEReader(fileStream, PEStreamOptions.LeaveOpen Or PEStreamOptions.PrefetchEntireImage)
+                ' Throws BadImageFormatException if the file is not a PE image.
+                Dim fileHeaders As PEHeaders = fileReader.PEHeaders
+                fileHasMetadata = fileReader.HasMetadata
+                Me.Win32Manifest = AssemblyInfo.ReadWin32Manifest(fileReader)
+                Me.BundleHostPlatform = If(fileHasMetadata, String.Empty, PeImageInspector.GetPlatformName(fileHeaders.CoffHeader.Machine, CType(0, CorFlags)))
+            End Using
+
+            If Not fileHasMetadata Then
+                Me.Bundle = SingleFileBundle.TryRead(fileStream)
+                If Me.Bundle Is Nothing Then
+                    Throw New BadImageFormatException($"The file is not a .NET assembly (it has no CLI metadata): {filepath}", filepath)
+                End If
+                Me.BundleMainAssembly = Me.Bundle.ResolveMainAssembly(fileStream, Path.GetFileName(filepath))
+                assemblyImage = Me.Bundle.ReadEntry(fileStream, Me.BundleMainAssembly)
+            End If
+
+            Me.ConfigurationFiles = AssemblyInfo.ReadConfigurationFiles(filepath, Me.Bundle, fileStream)
+        End Using
+
+        ' The assembly: the file itself, or the main assembly embedded in the single-file bundle.
+        Using stream As New MemoryStream(assemblyImage, writable:=False),
               peReader As New PEReader(stream, PEStreamOptions.PrefetchEntireImage)
 
-            ' Throws BadImageFormatException if the file is not a PE image.
             Me.PeHeader = peReader.PEHeaders
             If Not peReader.HasMetadata Then
                 Throw New BadImageFormatException($"The file is not a .NET assembly (it has no CLI metadata): {filepath}", filepath)
@@ -458,7 +557,11 @@ Public NotInheritable Class AssemblyInfo
                 Throw New BadImageFormatException($"The file is a .NET module, not an assembly (it has no assembly manifest): {filepath}", filepath)
             End If
 
-            Dim attributes As Dictionary(Of String, CustomAttribute) = MetadataReaderHelper.GetAssemblyAttributes(reader)
+            Dim allAttributes As Dictionary(Of String, List(Of CustomAttribute)) = MetadataReaderHelper.GetAllAssemblyAttributes(reader)
+            Dim attributes As Dictionary(Of String, CustomAttribute) = allAttributes.ToDictionary(
+                Function(pair As KeyValuePair(Of String, List(Of CustomAttribute))) pair.Key,
+                Function(pair As KeyValuePair(Of String, List(Of CustomAttribute))) pair.Value(0),
+                StringComparer.Ordinal)
             Dim corHeader As CorHeader = Me.PeHeader.CorHeader
             Dim machine As Machine = Me.PeHeader.CoffHeader.Machine
 
@@ -517,15 +620,29 @@ Public NotInheritable Class AssemblyInfo
             Me.IsOptimized = AssemblyInfo.GetIsOptimized(reader, attributes)
             Me.SecurityPermission = DeclarativeSecurityDecoder.Describe(reader)
             Me.RootNamespace = AssemblyInfo.DetectRootNamespace(reader)
+            Me.KeyFile = If(AssemblyInfo.GetStringArgument(reader, attributes, "System.Reflection.AssemblyKeyFileAttribute"), String.Empty)
+            Me.KeyName = If(AssemblyInfo.GetStringArgument(reader, attributes, "System.Reflection.AssemblyKeyNameAttribute"), String.Empty)
+            Me.DelaySign = AssemblyInfo.GetBooleanArgument(reader, attributes, "System.Reflection.AssemblyDelaySignAttribute")
+            Me.AssemblyMetadata = AssemblyInfo.ReadAssemblyMetadata(allAttributes)
+            Me.InternalsVisibleTo = AssemblyInfo.ReadInternalsVisibleTo(allAttributes)
+            Me.IsTrimmable = AssemblyInfo.GetMetadataBoolean(Me.AssemblyMetadata, "IsTrimmable")
+            Me.ComClasses = AssemblyInfo.ReadComClasses(reader)
 
             ' References
             Me.ReferencedAssemblies = AssemblyInfo.ReadAssemblyReferences(reader)
             Me.NativeModuleReferences = AssemblyInfo.ReadNativeModuleReferences(reader)
         End Using
 
-        Me.MD5Hash = AssemblyInfo.ComputeHash(MD5.Create(), rawAssembly)
-        Me.SHA1Hash = AssemblyInfo.ComputeHash(SHA1.Create(), rawAssembly)
-        Me.SHA256Hash = AssemblyInfo.ComputeHash(SHA256.Create(), rawAssembly)
+        ' Configuration files
+        Dim appConfigFile As ConfigurationFile = Me.GetConfigurationFile(ConfigurationFileKind.AppConfig)
+        Dim runtimeConfigFile As ConfigurationFile = Me.GetConfigurationFile(ConfigurationFileKind.RuntimeConfig)
+        Me.AppConfig = If(appConfigFile Is Nothing, Nothing, New AppConfigInfo(appConfigFile.Content))
+        Me.RuntimeConfig = If(runtimeConfigFile Is Nothing, Nothing, New RuntimeConfigInfo(runtimeConfigFile.Content))
+
+        ' Hashes of the file on disk (for bundles, the whole bundle file).
+        Me.MD5Hash = AssemblyInfo.ComputeHash(MD5.Create(), rawFile)
+        Me.SHA1Hash = AssemblyInfo.ComputeHash(SHA1.Create(), rawFile)
+        Me.SHA256Hash = AssemblyInfo.ComputeHash(SHA256.Create(), rawFile)
 
         Me.FileVersionInfo = FileVersionInfo.GetVersionInfo(filepath)
     End Sub
@@ -535,13 +652,14 @@ Public NotInheritable Class AssemblyInfo
 #Region " Public Methods "
 
     ''' <summary>
-    ''' Determines whether the specified file is a .NET assembly, by reading only its PE and CLI headers.
+    ''' Determines whether the specified file is a .NET assembly (or a .NET single-file bundle),
+    ''' by reading only its PE/CLI headers (and, for native images, the bundle manifest).
     ''' </summary>
     ''' <param name="filepath">
     ''' The file path.
     ''' </param>
     ''' <returns>
-    ''' <see langword="True"/> if the file is a .NET assembly;
+    ''' <see langword="True"/> if the file is a .NET assembly or a single-file bundle that contains assemblies;
     ''' <see langword="False"/> if it is not a PE image, has no CLI metadata, or is a module without manifest.
     ''' </returns>
     ''' <exception cref="ArgumentNullException">
@@ -557,18 +675,38 @@ Public NotInheritable Class AssemblyInfo
             Throw New ArgumentNullException(NameOf(filepath))
         End If
 
-        Using stream As New FileStream(filepath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite Or FileShare.Delete),
-              peReader As New PEReader(stream)
-
+        Using stream As New FileStream(filepath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite Or FileShare.Delete)
             Try
-                Return peReader.HasMetadata AndAlso peReader.GetMetadataReader().IsAssembly
+                Using peReader As New PEReader(stream, PEStreamOptions.LeaveOpen)
+                    If peReader.HasMetadata Then
+                        Return peReader.GetMetadataReader().IsAssembly
+                    End If
+                End Using
+
+                ' A native image: it can still be a .NET single-file bundle.
+                Dim bundle As SingleFileBundle = SingleFileBundle.TryRead(stream)
+                Return (bundle IsNot Nothing) AndAlso bundle.Entries.Any(Function(entry As BundleEntry) entry.Type = BundleFileType.Assembly)
 
             Catch ex As BadImageFormatException
-                ' Not a PE image, or corrupted CLI metadata: by definition, not a (readable) .NET assembly.
+                ' Not a PE image, or corrupted CLI metadata or bundle manifest: by definition, not a (readable) .NET assembly.
                 Return False
 
             End Try
         End Using
+    End Function
+
+    ''' <summary>
+    ''' Gets the configuration file of the specified kind.
+    ''' </summary>
+    ''' <param name="kind">
+    ''' The kind of configuration file.
+    ''' </param>
+    ''' <returns>
+    ''' The configuration file, or <see langword="Nothing"/> if there is none.
+    ''' </returns>
+    Public Function GetConfigurationFile(kind As ConfigurationFileKind) As ConfigurationFile
+
+        Return Me.ConfigurationFiles.FirstOrDefault(Function(file As ConfigurationFile) file.Kind = kind)
     End Function
 
 #End Region
@@ -879,6 +1017,9 @@ Public NotInheritable Class AssemblyInfo
                 .Version = reference.Version,
                 .CultureName = reader.GetString(reference.Culture)
             }
+            If (reference.Flags And AssemblyFlags.Retargetable) = AssemblyFlags.Retargetable Then
+                name.Flags = name.Flags Or AssemblyNameFlags.Retargetable
+            End If
 
             Dim keyOrToken As Byte() = reader.GetBlobBytes(reference.PublicKeyOrToken)
             If (reference.Flags And AssemblyFlags.PublicKey) = AssemblyFlags.PublicKey Then
@@ -1522,6 +1663,186 @@ Public NotInheritable Class AssemblyInfo
             Next b
             Return sb.ToString()
         End Using
+    End Function
+
+#End Region
+
+#Region " Private Methods (Files and Attributes) "
+
+    ''' <summary>
+    ''' Reads the Win32 application manifest of a PE image.
+    ''' </summary>
+    ''' <param name="peReader">
+    ''' The PE reader.
+    ''' </param>
+    ''' <returns>
+    ''' The manifest, or <see langword="Nothing"/> if the image has none.
+    ''' </returns>
+    Private Shared Function ReadWin32Manifest(peReader As PEReader) As Win32ManifestInfo
+
+        Dim resourceId As Integer
+        Dim data As Byte() = Win32ResourceReader.ReadFirstResource(peReader, Win32ResourceReader.ManifestResourceType, resourceId)
+        Return If(data Is Nothing, Nothing, New Win32ManifestInfo(data, resourceId))
+    End Function
+
+    ''' <summary>
+    ''' Reads the configuration files of an assembly: the app.config sidecar file ("[file].config"),
+    ''' and the runtimeconfig.json and deps.json files (embedded in the single-file bundle, or sidecar files).
+    ''' </summary>
+    ''' <param name="filepath">
+    ''' The assembly (or bundle) file path.
+    ''' </param>
+    '''
+    ''' <param name="bundle">
+    ''' The single-file bundle, or <see langword="Nothing"/>.
+    ''' </param>
+    '''
+    ''' <param name="bundleStream">
+    ''' The stream of the bundle file.
+    ''' </param>
+    ''' <returns>
+    ''' The configuration files that exist.
+    ''' </returns>
+    Private Shared Function ReadConfigurationFiles(filepath As String, bundle As SingleFileBundle, bundleStream As Stream) As ReadOnlyCollection(Of ConfigurationFile)
+
+        Dim files As New List(Of ConfigurationFile)
+
+        Dim appConfigPath As String = $"{filepath}.config"
+        If File.Exists(appConfigPath) Then
+            files.Add(New ConfigurationFile(ConfigurationFileKind.AppConfig, Path.GetFileName(appConfigPath), False, TextFileDecoder.Decode(File.ReadAllBytes(appConfigPath))))
+        End If
+
+        Dim directory As String = If(Path.GetDirectoryName(filepath), String.Empty)
+        Dim baseName As String = Path.GetFileNameWithoutExtension(filepath)
+        Dim kinds As New Dictionary(Of ConfigurationFileKind, BundleFileType) From {
+            {ConfigurationFileKind.RuntimeConfig, BundleFileType.RuntimeConfigJson},
+            {ConfigurationFileKind.DepsJson, BundleFileType.DepsJson}
+        }
+
+        For Each pair As KeyValuePair(Of ConfigurationFileKind, BundleFileType) In kinds
+            Dim embedded As BundleEntry = If(bundle Is Nothing, Nothing, bundle.Entries.FirstOrDefault(Function(entry As BundleEntry) entry.Type = pair.Value))
+            If embedded IsNot Nothing Then
+                files.Add(New ConfigurationFile(pair.Key, embedded.RelativePath, True, TextFileDecoder.Decode(bundle.ReadEntry(bundleStream, embedded))))
+                Continue For
+            End If
+
+            Dim extension As String = If(pair.Key = ConfigurationFileKind.RuntimeConfig, ".runtimeconfig.json", ".deps.json")
+            Dim sidecarPath As String = Path.Combine(directory, $"{baseName}{extension}")
+            If File.Exists(sidecarPath) Then
+                files.Add(New ConfigurationFile(pair.Key, Path.GetFileName(sidecarPath), False, TextFileDecoder.Decode(File.ReadAllBytes(sidecarPath))))
+            End If
+        Next pair
+
+        Return files.AsReadOnly()
+    End Function
+
+    ''' <summary>
+    ''' Reads the key/value pairs of every <c>AssemblyMetadataAttribute</c>.
+    ''' </summary>
+    ''' <param name="allAttributes">
+    ''' All the assembly custom attributes, grouped by attribute type.
+    ''' </param>
+    ''' <returns>
+    ''' The key/value pairs, in declaration order.
+    ''' </returns>
+    Private Shared Function ReadAssemblyMetadata(allAttributes As Dictionary(Of String, List(Of CustomAttribute))) As ReadOnlyCollection(Of KeyValuePair(Of String, String))
+
+        Dim pairs As New List(Of KeyValuePair(Of String, String))
+        Dim instances As List(Of CustomAttribute) = Nothing
+        If allAttributes.TryGetValue("System.Reflection.AssemblyMetadataAttribute", instances) Then
+            For Each attribute As CustomAttribute In instances
+                Dim value As CustomAttributeValue(Of String) = attribute.DecodeValue(New AttributeValueTypeProvider())
+                If value.FixedArguments.Length <> 2 Then
+                    Throw New BadImageFormatException("Unexpected AssemblyMetadataAttribute constructor.")
+                End If
+                pairs.Add(New KeyValuePair(Of String, String)(If(TryCast(value.FixedArguments(0).Value, String), String.Empty),
+                                                             If(TryCast(value.FixedArguments(1).Value, String), String.Empty)))
+            Next attribute
+        End If
+        Return pairs.AsReadOnly()
+    End Function
+
+    ''' <summary>
+    ''' Reads the friend assemblies declared with <c>InternalsVisibleToAttribute</c>.
+    ''' </summary>
+    ''' <param name="allAttributes">
+    ''' All the assembly custom attributes, grouped by attribute type.
+    ''' </param>
+    ''' <returns>
+    ''' The friend assembly names, in declaration order.
+    ''' </returns>
+    Private Shared Function ReadInternalsVisibleTo(allAttributes As Dictionary(Of String, List(Of CustomAttribute))) As ReadOnlyCollection(Of String)
+
+        Dim friends As New List(Of String)
+        Dim instances As List(Of CustomAttribute) = Nothing
+        If allAttributes.TryGetValue("System.Runtime.CompilerServices.InternalsVisibleToAttribute", instances) Then
+            For Each attribute As CustomAttribute In instances
+                Dim value As CustomAttributeValue(Of String) = attribute.DecodeValue(New AttributeValueTypeProvider())
+                friends.Add(If(TryCast(value.FixedArguments(0).Value, String), String.Empty))
+            Next attribute
+        End If
+        Return friends.AsReadOnly()
+    End Function
+
+    ''' <summary>
+    ''' Gets the Boolean value of an <c>AssemblyMetadataAttribute</c> key.
+    ''' </summary>
+    ''' <param name="metadata">
+    ''' The assembly metadata key/value pairs.
+    ''' </param>
+    '''
+    ''' <param name="key">
+    ''' The key (case-insensitive).
+    ''' </param>
+    ''' <returns>
+    ''' The value, or <see langword="Nothing"/> if the key is not present or its value is not a Boolean.
+    ''' </returns>
+    Private Shared Function GetMetadataBoolean(metadata As IEnumerable(Of KeyValuePair(Of String, String)), key As String) As Boolean?
+
+        For Each pair As KeyValuePair(Of String, String) In metadata
+            Dim result As Boolean
+            If String.Equals(pair.Key, key, StringComparison.OrdinalIgnoreCase) AndAlso Boolean.TryParse(pair.Value, result) Then
+                Return result
+            End If
+        Next pair
+        Return Nothing
+    End Function
+
+    ''' <summary>
+    ''' Reads the classes (not interfaces) that have an explicit <see cref="GuidAttribute"/>.
+    ''' </summary>
+    ''' <param name="reader">
+    ''' The metadata reader.
+    ''' </param>
+    ''' <returns>
+    ''' The full type names and their GUIDs, in metadata order.
+    ''' </returns>
+    Private Shared Function ReadComClasses(reader As MetadataReader) As ReadOnlyCollection(Of KeyValuePair(Of String, Guid))
+
+        Const GuidAttributeName As String = "System.Runtime.InteropServices.GuidAttribute"
+        Dim classes As New List(Of KeyValuePair(Of String, Guid))
+
+        For Each handle As TypeDefinitionHandle In reader.TypeDefinitions
+            Dim definition As TypeDefinition = reader.GetTypeDefinition(handle)
+            If (definition.Attributes And TypeAttributes.Interface) = TypeAttributes.Interface Then
+                Continue For
+            End If
+
+            For Each attributeHandle As CustomAttributeHandle In definition.GetCustomAttributes()
+                Dim attribute As CustomAttribute = reader.GetCustomAttribute(attributeHandle)
+                If Not String.Equals(MetadataReaderHelper.GetAttributeTypeFullName(reader, attribute), GuidAttributeName, StringComparison.Ordinal) Then
+                    Continue For
+                End If
+
+                Dim value As CustomAttributeValue(Of String) = attribute.DecodeValue(New AttributeValueTypeProvider())
+                Dim classId As Guid
+                If (value.FixedArguments.Length = 1) AndAlso System.Guid.TryParse(TryCast(value.FixedArguments(0).Value, String), classId) Then
+                    classes.Add(New KeyValuePair(Of String, Guid)(MetadataReaderHelper.GetTypeFullName(reader, handle), classId))
+                End If
+            Next attributeHandle
+        Next handle
+
+        Return classes.AsReadOnly()
     End Function
 
 #End Region

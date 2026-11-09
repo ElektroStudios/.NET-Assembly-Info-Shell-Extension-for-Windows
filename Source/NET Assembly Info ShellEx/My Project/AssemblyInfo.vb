@@ -1,4 +1,12 @@
-﻿Imports System.Resources
+﻿#Region " Option Statements "
+
+Option Strict On
+Option Explicit On
+Option Infer Off
+
+#End Region
+
+Imports System.Resources
 Imports System
 Imports System.Reflection
 Imports System.Runtime.CompilerServices
@@ -39,3 +47,4 @@ Imports System.Runtime.InteropServices
 
 ' Allows the unit test project to access the Friend (internal) members.
 <Assembly: InternalsVisibleTo("AssemblyInfo.Tests")>
+<Assembly: InternalsVisibleTo("AssemblyInfo.Preview")>

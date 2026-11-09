@@ -137,6 +137,21 @@ Namespace Fixtures
         ''' <summary>Gets or sets a value indicating whether the CLI header data directory is removed (emits a native-only PE).</summary>
         Friend Property RemoveCliHeader As Boolean
 
+        ''' <summary>Gets or sets the Win32 manifest resource data (RT_MANIFEST), or <see langword="Nothing"/> for no resources.</summary>
+        Friend Property Win32Manifest As Byte()
+
+        ''' <summary>Gets or sets the integer ID of the Win32 manifest resource.</summary>
+        Friend Property Win32ManifestId As Integer = 1
+
+        ''' <summary>Gets the GUIDs to apply with a type-level <c>GuidAttribute</c>, keyed by type full name (the types are defined automatically).</summary>
+        Friend ReadOnly Property TypeGuids As New Dictionary(Of String, String)(StringComparer.Ordinal)
+
+        ''' <summary>Gets the full names of the types (of <see cref="TypeNames"/> or <see cref="TypeGuids"/>) that are defined as interfaces.</summary>
+        Friend ReadOnly Property InterfaceTypeNames As New List(Of String)
+
+        ''' <summary>Gets the flags of the additional assembly references, keyed by reference name.</summary>
+        Friend ReadOnly Property AssemblyReferenceFlags As New Dictionary(Of String, AssemblyFlags)(StringComparer.Ordinal)
+
     End Class
 
 End Namespace

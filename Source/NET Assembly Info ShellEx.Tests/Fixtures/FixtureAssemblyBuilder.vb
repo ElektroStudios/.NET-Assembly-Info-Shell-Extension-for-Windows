@@ -106,10 +106,12 @@ Namespace Fixtures
             ' Assembly references.
             Dim coreLibrary As AssemblyReferenceHandle = FixtureAssemblyBuilder.AddCoreLibraryReference(metadata, options.CoreLibrary)
             For Each reference As Tuple(Of String, Version, Byte()) In options.AssemblyReferences
+                Dim flags As AssemblyFlags = Nothing
+                options.AssemblyReferenceFlags.TryGetValue(reference.Item1, flags)
                 metadata.AddAssemblyReference(
                     metadata.GetOrAddString(reference.Item1), reference.Item2, Nothing,
                     If(reference.Item3 Is Nothing, Nothing, metadata.GetOrAddBlob(reference.Item3)),
-                    CType(0, AssemblyFlags), Nothing)
+                    flags, Nothing)
             Next reference
 
             Dim typeReferences As New Dictionary(Of String, TypeReferenceHandle)(StringComparer.Ordinal)
@@ -122,7 +124,7 @@ Namespace Fixtures
             End If
 
             For Each attribute As FixtureAttribute In options.Attributes
-                FixtureAssemblyBuilder.AddAssemblyAttribute(metadata, assemblyHandle, coreLibrary, typeReferences, attribute)
+                FixtureAssemblyBuilder.AddCustomAttribute(metadata, assemblyHandle, coreLibrary, typeReferences, attribute)
             Next attribute
 
             For Each security As Tuple(Of DeclarativeSecurityAction, Byte()) In options.DeclarativeSecurity
@@ -171,6 +173,7 @@ Namespace Fixtures
                 metadataRootBuilder:=New MetadataRootBuilder(metadata, options.MetadataVersion),
                 ilStream:=ilStream,
                 debugDirectoryBuilder:=debugDirectory,
+                nativeResources:=If(options.Win32Manifest Is Nothing, Nothing, New ManifestResourceSectionBuilder(24, options.Win32ManifestId, options.Win32Manifest)),
                 strongNameSignatureSize:=If(options.PublicKey Is Nothing, 0, 128),
                 entryPoint:=entryPoint,
                 flags:=options.CorFlags,
@@ -308,8 +311,8 @@ Namespace Fixtures
         ''' <summary>
         ''' Adds an assembly-level custom attribute.
         ''' </summary>
-        Private Shared Sub AddAssemblyAttribute(metadata As MetadataBuilder, assemblyHandle As AssemblyDefinitionHandle, coreLibrary As AssemblyReferenceHandle,
-                                                cache As Dictionary(Of String, TypeReferenceHandle), attribute As FixtureAttribute)
+        Private Shared Sub AddCustomAttribute(metadata As MetadataBuilder, parent As EntityHandle, coreLibrary As AssemblyReferenceHandle,
+                                              cache As Dictionary(Of String, TypeReferenceHandle), attribute As FixtureAttribute)
 
             Dim attributeType As TypeReferenceHandle = FixtureAssemblyBuilder.GetOrAddTypeReference(metadata, coreLibrary, cache, attribute.TypeFullName)
 
@@ -358,7 +361,7 @@ Namespace Fixtures
                 FixtureAssemblyBuilder.WriteArgumentValue(value, pair.Value)
             Next pair
 
-            metadata.AddCustomAttribute(assemblyHandle, constructor, metadata.GetOrAddBlob(value))
+            metadata.AddCustomAttribute(parent, constructor, metadata.GetOrAddBlob(value))
         End Sub
 
         ''' <summary>
@@ -409,6 +412,11 @@ Namespace Fixtures
 
             ' Expand the type list so every declaring type precedes its nested types.
             Dim requested As New List(Of String)(options.TypeNames)
+            For Each typeName As String In options.TypeGuids.Keys
+                If Not requested.Contains(typeName) Then
+                    requested.Add(typeName)
+                End If
+            Next typeName
             If (options.EntryPointTypeName IsNot Nothing) AndAlso Not requested.Contains(options.EntryPointTypeName) Then
                 requested.Add(options.EntryPointTypeName)
             End If
@@ -467,6 +475,7 @@ Namespace Fixtures
                 Dim typeName As String
                 Dim attributes As TypeAttributes
 
+                Dim isInterface As Boolean = options.InterfaceTypeNames.Contains(fullName)
                 If plusIndex <> -1 Then
                     typeName = fullName.Substring(plusIndex + 1)
                     attributes = TypeAttributes.NestedPublic
@@ -477,12 +486,16 @@ Namespace Fixtures
                     attributes = TypeAttributes.Public
                 End If
 
+                If isInterface Then
+                    attributes = attributes Or TypeAttributes.Interface Or TypeAttributes.Abstract
+                End If
+
                 Dim methodList As Integer = If((ownerIndex <> -1) AndAlso (i > ownerIndex), 2, 1)
                 Dim handle As TypeDefinitionHandle = metadata.AddTypeDefinition(
                     attributes,
                     If(namespaceName.Length = 0, Nothing, metadata.GetOrAddString(namespaceName)),
                     metadata.GetOrAddString(typeName),
-                    baseType,
+                    If(isInterface, Nothing, baseType),
                     MetadataTokens.FieldDefinitionHandle(1),
                     MetadataTokens.MethodDefinitionHandle(methodList))
 
@@ -491,6 +504,12 @@ Namespace Fixtures
                     metadata.AddNestedType(handle, definitions(fullName.Substring(0, plusIndex)))
                 End If
             Next i
+
+            ' Type-level GuidAttribute (candidate COM classes and interfaces).
+            For Each pair As KeyValuePair(Of String, String) In options.TypeGuids
+                FixtureAssemblyBuilder.AddCustomAttribute(metadata, definitions(pair.Key), coreLibrary, cache,
+                                                          FixtureAttribute.Guid(pair.Value))
+            Next pair
 
             Return entryPoint
         End Function

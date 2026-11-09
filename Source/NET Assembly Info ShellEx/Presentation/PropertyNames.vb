@@ -41,6 +41,12 @@ Namespace AssemblyInspection
         ''' <summary>The title of the group with the referenced assemblies and native modules.</summary>
         Friend Const GroupReferences As String = "References"
 
+        ''' <summary>The title of the group with the assembly-level attributes.</summary>
+        Friend Const GroupAttributes As String = "Attributes"
+
+        ''' <summary>The title of the group with the deployment, configuration files and Win32 manifest information.</summary>
+        Friend Const GroupRuntime As String = "Runtime"
+
 #End Region
 
 #Region " Common Values "
@@ -209,6 +215,95 @@ Namespace AssemblyInspection
 
 #End Region
 
+#Region " Attributes Rows "
+
+        ''' <summary>The key file (AssemblyKeyFileAttribute).</summary>
+        Friend Const KeyFile As String = "Key File"
+
+        ''' <summary>The key container (AssemblyKeyNameAttribute).</summary>
+        Friend Const KeyContainer As String = "Key Container"
+
+        ''' <summary>The delay-sign flag (AssemblyDelaySignAttribute).</summary>
+        Friend Const DelaySign As String = "Delay Sign"
+
+        ''' <summary>A friend assembly (InternalsVisibleToAttribute); one row per friend.</summary>
+        Friend Const InternalsVisibleTo As String = "Internals Visible To"
+
+        ''' <summary>The prefix of the rows of the classes with an explicit GUID (candidate COM classes).</summary>
+        Friend Const ComClassPrefix As String = "COM Class: "
+
+        ''' <summary>The prefix of the AssemblyMetadataAttribute rows.</summary>
+        Friend Const MetadataPrefix As String = "Metadata: "
+
+#End Region
+
+#Region " Runtime Rows "
+
+        ''' <summary>Whether the file is a .NET single-file bundle.</summary>
+        Friend Const SingleFileBundle As String = "Single-File Bundle"
+
+        ''' <summary>The main assembly embedded in the single-file bundle.</summary>
+        Friend Const BundledMainAssembly As String = "Bundled Main Assembly"
+
+        ''' <summary>The platform of the native host of the single-file bundle.</summary>
+        Friend Const BundleHostPlatform As String = "Bundle Host Platform"
+
+        ''' <summary>The deployment model (framework-dependent or self-contained).</summary>
+        Friend Const Deployment As String = "Deployment"
+
+        ''' <summary>Whether the library is marked as trimmable.</summary>
+        Friend Const Trimmable As String = "Trimmable"
+
+        ''' <summary>The runtimeconfig.json file.</summary>
+        Friend Const RuntimeConfig As String = "Runtime Config"
+
+        ''' <summary>The target framework moniker declared in runtimeconfig.json.</summary>
+        Friend Const RuntimeConfigTfm As String = "Runtime Config TFM"
+
+        ''' <summary>The shared or included frameworks declared in runtimeconfig.json.</summary>
+        Friend Const Frameworks As String = "Frameworks"
+
+        ''' <summary>The roll-forward policy declared in runtimeconfig.json.</summary>
+        Friend Const RollForward As String = "Roll Forward"
+
+        ''' <summary>The prefix of the runtimeconfig.json configuration property rows.</summary>
+        Friend Const ConfigPropertyPrefix As String = "Config: "
+
+        ''' <summary>The application configuration file (app.config).</summary>
+        Friend Const AppConfig As String = "App Config"
+
+        ''' <summary>The supported runtimes declared in app.config.</summary>
+        Friend Const SupportedRuntimes As String = "Supported Runtimes"
+
+        ''' <summary>The prefix of the app.config binding redirect rows.</summary>
+        Friend Const BindingRedirectPrefix As String = "Binding Redirect: "
+
+        ''' <summary>The Win32 application manifest.</summary>
+        Friend Const Win32Manifest As String = "Win32 Manifest"
+
+        ''' <summary>The UAC requested execution level.</summary>
+        Friend Const ExecutionLevel As String = "Requested Execution Level"
+
+        ''' <summary>The UAC uiAccess setting.</summary>
+        Friend Const UIAccess As String = "UI Access"
+
+        ''' <summary>The Win32 DPI awareness settings.</summary>
+        Friend Const DpiAwareness As String = "DPI Awareness"
+
+        ''' <summary>The Windows versions declared as supported.</summary>
+        Friend Const SupportedOS As String = "Supported OS"
+
+        ''' <summary>Whether the manifest enables the Common Controls v6 (visual styles).</summary>
+        Friend Const CommonControlsV6 As String = "Common Controls v6"
+
+        ''' <summary>The longPathAware setting.</summary>
+        Friend Const LongPathAware As String = "Long Path Aware"
+
+        ''' <summary>The activeCodePage setting.</summary>
+        Friend Const ActiveCodePage As String = "Active Code Page"
+
+#End Region
+
 #Region " References Rows "
 
         ''' <summary>The row name shown when there are no references.</summary>
@@ -216,6 +311,9 @@ Namespace AssemblyInspection
 
         ''' <summary>The value shown for a native module referenced by P/Invoke.</summary>
         Friend Const NativeLibraryValue As String = "Native library (P/Invoke)"
+
+        ''' <summary>The suffix appended to version 0.0.0.0 references, which match any version.</summary>
+        Friend Const AnyVersionSuffix As String = " (any version)"
 
         ''' <summary>The row name used to report a loading error.</summary>
         Friend Const ErrorRow As String = "Error"

@@ -1,0 +1,50 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Hosts the property page in a regular window, to design and debug it
+    without registering the shell-extension (set this project as the startup project).
+
+    The UserControl Test Container of Visual Studio cannot be used for this purpose,
+    because it only resolves dependencies installed in the GAC (SharpShell, System.Reflection.Metadata, etc).
+  -->
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net481</TargetFramework>
+    <AssemblyName>AssemblyInfo.Preview</AssemblyName>
+    <RootNamespace>ShellExPreview</RootNamespace>
+    <StartupObject>ShellExPreview.Program</StartupObject>
+    <LangVersion>latest</LangVersion>
+    <OptionStrict>On</OptionStrict>
+    <OptionExplicit>On</OptionExplicit>
+    <OptionInfer>Off</OptionInfer>
+    <OptionCompare>Binary</OptionCompare>
+    <MyType>Empty</MyType>
+    <IsPackable>false</IsPackable>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <Deterministic>true</Deterministic>
+    <DebugType>portable</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <Prefer32Bit>false</Prefer32Bit>
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <GenerateBindingRedirectsOutputType>true</GenerateBindingRedirectsOutputType>
+    <ApplicationIcon />
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net481" Version="1.0.3" PrivateAssets="all" />
+    <!-- Same versions as the shell extension, so the dependencies are copied to the output directory. -->
+    <PackageReference Include="SharpShell" Version="2.7.2" />
+    <PackageReference Include="System.Reflection.Metadata" Version="10.0.14" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Drawing" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\NET Assembly Info ShellEx\NET Assembly Info ShellEx.vbproj" />
+  </ItemGroup>
+
+</Project>

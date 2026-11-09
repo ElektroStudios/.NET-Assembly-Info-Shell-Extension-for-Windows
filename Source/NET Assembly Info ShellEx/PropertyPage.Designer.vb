@@ -22,9 +22,11 @@ Partial Class PropertyPage : Inherits SharpPropertyPage
         Me.ContextMenuStripListView = New System.Windows.Forms.ContextMenuStrip(Me.components)
         Me.CopyToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
         Me.CopyValueToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
+        Me.ToolStripSeparatorContext = New System.Windows.Forms.ToolStripSeparator()
+        Me.CopySelectedToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
+        Me.ExportSelectedToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
         Me.TableLayoutPanelMain = New System.Windows.Forms.TableLayoutPanel()
-        Me.PanelBottom = New System.Windows.Forms.Panel()
-        Me.ButtonSave = New System.Windows.Forms.Button()
+        Me.TextBoxFilter = New System.Windows.Forms.TextBox()
         Me.TabControlListViews = New Usercontrols.TabControlFix()
         Me.TabPageProduct = New System.Windows.Forms.TabPage()
         Me.ListViewProduct = New System.Windows.Forms.ListView()
@@ -38,94 +40,132 @@ Partial Class PropertyPage : Inherits SharpPropertyPage
         Me.ListViewIdentity = New System.Windows.Forms.ListView()
         Me.ColumnHeader5 = CType(New System.Windows.Forms.ColumnHeader(), System.Windows.Forms.ColumnHeader)
         Me.ColumnHeader6 = CType(New System.Windows.Forms.ColumnHeader(), System.Windows.Forms.ColumnHeader)
+        Me.TabPageAttributes = New System.Windows.Forms.TabPage()
+        Me.ListViewAttributes = New System.Windows.Forms.ListView()
+        Me.ColumnHeader7 = CType(New System.Windows.Forms.ColumnHeader(), System.Windows.Forms.ColumnHeader)
+        Me.ColumnHeader8 = CType(New System.Windows.Forms.ColumnHeader(), System.Windows.Forms.ColumnHeader)
         Me.TabPageReferences = New System.Windows.Forms.TabPage()
         Me.ListViewReferences = New System.Windows.Forms.ListView()
         Me.ColumnHeader3 = CType(New System.Windows.Forms.ColumnHeader(), System.Windows.Forms.ColumnHeader)
         Me.ColumnHeader4 = CType(New System.Windows.Forms.ColumnHeader(), System.Windows.Forms.ColumnHeader)
+        Me.TabPageRuntime = New System.Windows.Forms.TabPage()
+        Me.ListViewRuntime = New System.Windows.Forms.ListView()
+        Me.ColumnHeader9 = CType(New System.Windows.Forms.ColumnHeader(), System.Windows.Forms.ColumnHeader)
+        Me.ColumnHeader10 = CType(New System.Windows.Forms.ColumnHeader(), System.Windows.Forms.ColumnHeader)
+        Me.ToolStripMain = New System.Windows.Forms.ToolStrip()
+        Me.ToolStripDropDownButtonExport = New System.Windows.Forms.ToolStripDropDownButton()
+        Me.ExportAllToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
+        Me.ExportTabToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
+        Me.ExportSelectionToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
+        Me.ToolStripSplitButtonCopyAll = New System.Windows.Forms.ToolStripSplitButton()
+        Me.CopyAllTextToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
+        Me.CopyAllMarkdownToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
+        Me.ToolStripSeparator1 = New System.Windows.Forms.ToolStripSeparator()
+        Me.ToolStripButtonCompare = New System.Windows.Forms.ToolStripButton()
+        Me.ToolStripSeparator2 = New System.Windows.Forms.ToolStripSeparator()
+        Me.ToolStripButtonManifest = New System.Windows.Forms.ToolStripButton()
+        Me.ToolStripDropDownButtonConfig = New System.Windows.Forms.ToolStripDropDownButton()
+        Me.ToolStripSeparator3 = New System.Windows.Forms.ToolStripSeparator()
+        Me.ToolStripSplitButtonRegEdit = New System.Windows.Forms.ToolStripSplitButton()
+        Me.ToolStripButtonGac = New System.Windows.Forms.ToolStripButton()
         Me.ContextMenuStripListView.SuspendLayout()
         Me.TableLayoutPanelMain.SuspendLayout()
-        Me.PanelBottom.SuspendLayout()
         Me.TabControlListViews.SuspendLayout()
         Me.TabPageProduct.SuspendLayout()
         Me.TabPageBuild.SuspendLayout()
         Me.TabPageIdentity.SuspendLayout()
+        Me.TabPageAttributes.SuspendLayout()
         Me.TabPageReferences.SuspendLayout()
+        Me.TabPageRuntime.SuspendLayout()
+        Me.ToolStripMain.SuspendLayout()
         Me.SuspendLayout()
         '
         'ContextMenuStripListView
         '
-        Me.ContextMenuStripListView.Items.AddRange(New System.Windows.Forms.ToolStripItem() {Me.CopyToolStripMenuItem, Me.CopyValueToolStripMenuItem})
-        Me.ContextMenuStripListView.Name = "ContextMenuStrip1"
-        Me.ContextMenuStripListView.Size = New System.Drawing.Size(134, 48)
+        Me.ContextMenuStripListView.Items.AddRange(New System.Windows.Forms.ToolStripItem() {Me.CopyToolStripMenuItem, Me.CopyValueToolStripMenuItem, Me.ToolStripSeparatorContext, Me.CopySelectedToolStripMenuItem, Me.ExportSelectedToolStripMenuItem})
+        Me.ContextMenuStripListView.Name = "ContextMenuStripListView"
+        Me.ContextMenuStripListView.Size = New System.Drawing.Size(196, 98)
         '
         'CopyToolStripMenuItem
         '
         Me.CopyToolStripMenuItem.Image = Global.My.Resources.Resources.Copy
         Me.CopyToolStripMenuItem.Name = "CopyToolStripMenuItem"
-        Me.CopyToolStripMenuItem.Size = New System.Drawing.Size(133, 22)
+        Me.CopyToolStripMenuItem.Size = New System.Drawing.Size(195, 22)
         Me.CopyToolStripMenuItem.Text = "Copy"
         '
         'CopyValueToolStripMenuItem
         '
         Me.CopyValueToolStripMenuItem.Image = Global.My.Resources.Resources.Copy
         Me.CopyValueToolStripMenuItem.Name = "CopyValueToolStripMenuItem"
-        Me.CopyValueToolStripMenuItem.Size = New System.Drawing.Size(133, 22)
+        Me.CopyValueToolStripMenuItem.Size = New System.Drawing.Size(195, 22)
         Me.CopyValueToolStripMenuItem.Text = "Copy Value"
+        '
+        'CopySelectedToolStripMenuItem
+        '
+        Me.CopySelectedToolStripMenuItem.Image = Global.My.Resources.Resources.CopyAll
+        Me.CopySelectedToolStripMenuItem.Name = "CopySelectedToolStripMenuItem"
+        Me.CopySelectedToolStripMenuItem.Size = New System.Drawing.Size(195, 22)
+        Me.CopySelectedToolStripMenuItem.Text = "Copy Selected Rows"
+        '
+        'ExportSelectedToolStripMenuItem
+        '
+        Me.ExportSelectedToolStripMenuItem.Image = Global.My.Resources.Resources.ExportSelection
+        Me.ExportSelectedToolStripMenuItem.Name = "ExportSelectedToolStripMenuItem"
+        Me.ExportSelectedToolStripMenuItem.Size = New System.Drawing.Size(195, 22)
+        Me.ExportSelectedToolStripMenuItem.Text = "Export Selected Rows..."
+        '
+        'ToolStripSeparatorContext
+        '
+        Me.ToolStripSeparatorContext.Name = "ToolStripSeparatorContext"
+        Me.ToolStripSeparatorContext.Size = New System.Drawing.Size(192, 6)
         '
         'TableLayoutPanelMain
         '
         Me.TableLayoutPanelMain.ColumnCount = 1
         Me.TableLayoutPanelMain.ColumnStyles.Add(New System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100.0!))
-        Me.TableLayoutPanelMain.Controls.Add(Me.PanelBottom, 0, 1)
-        Me.TableLayoutPanelMain.Controls.Add(Me.TabControlListViews, 0, 0)
+        Me.TableLayoutPanelMain.Controls.Add(Me.TextBoxFilter, 0, 0)
+        Me.TableLayoutPanelMain.Controls.Add(Me.TabControlListViews, 0, 1)
+        Me.TableLayoutPanelMain.Controls.Add(Me.ToolStripMain, 0, 2)
         Me.TableLayoutPanelMain.Dock = System.Windows.Forms.DockStyle.Fill
         Me.TableLayoutPanelMain.Location = New System.Drawing.Point(0, 0)
         Me.TableLayoutPanelMain.Name = "TableLayoutPanelMain"
-        Me.TableLayoutPanelMain.RowCount = 2
-        Me.TableLayoutPanelMain.RowStyles.Add(New System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 90.69212!))
-        Me.TableLayoutPanelMain.RowStyles.Add(New System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 9.307876!))
+        Me.TableLayoutPanelMain.RowCount = 3
+        Me.TableLayoutPanelMain.RowStyles.Add(New System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 26.0!))
+        Me.TableLayoutPanelMain.RowStyles.Add(New System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100.0!))
+        Me.TableLayoutPanelMain.RowStyles.Add(New System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 28.0!))
         Me.TableLayoutPanelMain.Size = New System.Drawing.Size(339, 422)
-        Me.TableLayoutPanelMain.TabIndex = 37
+        Me.TableLayoutPanelMain.TabIndex = 0
         '
-        'PanelBottom
+        'TextBoxFilter
         '
-        Me.PanelBottom.Controls.Add(Me.ButtonSave)
-        Me.PanelBottom.Location = New System.Drawing.Point(3, 385)
-        Me.PanelBottom.Name = "PanelBottom"
-        Me.PanelBottom.Size = New System.Drawing.Size(333, 34)
-        Me.PanelBottom.TabIndex = 38
-        '
-        'ButtonSave
-        '
-        Me.ButtonSave.Image = Global.My.Resources.Resources.Save
-        Me.ButtonSave.ImageAlign = System.Drawing.ContentAlignment.TopLeft
-        Me.ButtonSave.Location = New System.Drawing.Point(4, 6)
-        Me.ButtonSave.Name = "ButtonSave"
-        Me.ButtonSave.Size = New System.Drawing.Size(82, 23)
-        Me.ButtonSave.TabIndex = 0
-        Me.ButtonSave.Text = "Export..."
-        Me.ButtonSave.TextImageRelation = System.Windows.Forms.TextImageRelation.ImageBeforeText
-        Me.ButtonSave.UseVisualStyleBackColor = True
+        Me.TextBoxFilter.Dock = System.Windows.Forms.DockStyle.Fill
+        Me.TextBoxFilter.Location = New System.Drawing.Point(3, 3)
+        Me.TextBoxFilter.Name = "TextBoxFilter"
+        Me.TextBoxFilter.Size = New System.Drawing.Size(333, 20)
+        Me.TextBoxFilter.TabIndex = 0
         '
         'TabControlListViews
         '
         Me.TabControlListViews.Controls.Add(Me.TabPageProduct)
         Me.TabControlListViews.Controls.Add(Me.TabPageBuild)
         Me.TabControlListViews.Controls.Add(Me.TabPageIdentity)
+        Me.TabControlListViews.Controls.Add(Me.TabPageAttributes)
         Me.TabControlListViews.Controls.Add(Me.TabPageReferences)
+        Me.TabControlListViews.Controls.Add(Me.TabPageRuntime)
         Me.TabControlListViews.Dock = System.Windows.Forms.DockStyle.Fill
-        Me.TabControlListViews.Location = New System.Drawing.Point(3, 3)
+        Me.TabControlListViews.Location = New System.Drawing.Point(3, 29)
         Me.TabControlListViews.Name = "TabControlListViews"
+        Me.TabControlListViews.Padding = New System.Drawing.Point(4, 3)
         Me.TabControlListViews.SelectedIndex = 0
-        Me.TabControlListViews.Size = New System.Drawing.Size(333, 376)
-        Me.TabControlListViews.TabIndex = 38
+        Me.TabControlListViews.Size = New System.Drawing.Size(333, 362)
+        Me.TabControlListViews.TabIndex = 1
         '
         'TabPageProduct
         '
         Me.TabPageProduct.Controls.Add(Me.ListViewProduct)
         Me.TabPageProduct.Location = New System.Drawing.Point(4, 22)
         Me.TabPageProduct.Name = "TabPageProduct"
-        Me.TabPageProduct.Size = New System.Drawing.Size(325, 350)
+        Me.TabPageProduct.Size = New System.Drawing.Size(325, 336)
         Me.TabPageProduct.TabIndex = 0
         Me.TabPageProduct.Text = "Product"
         Me.TabPageProduct.UseVisualStyleBackColor = True
@@ -137,11 +177,12 @@ Partial Class PropertyPage : Inherits SharpPropertyPage
         Me.ListViewProduct.Dock = System.Windows.Forms.DockStyle.Fill
         Me.ListViewProduct.FullRowSelect = True
         Me.ListViewProduct.HeaderStyle = System.Windows.Forms.ColumnHeaderStyle.Nonclickable
+        Me.ListViewProduct.HideSelection = False
         Me.ListViewProduct.Location = New System.Drawing.Point(0, 0)
         Me.ListViewProduct.Name = "ListViewProduct"
         Me.ListViewProduct.ShowItemToolTips = True
-        Me.ListViewProduct.Size = New System.Drawing.Size(325, 350)
-        Me.ListViewProduct.TabIndex = 34
+        Me.ListViewProduct.Size = New System.Drawing.Size(325, 336)
+        Me.ListViewProduct.TabIndex = 0
         Me.ListViewProduct.UseCompatibleStateImageBehavior = False
         Me.ListViewProduct.View = System.Windows.Forms.View.Details
         '
@@ -160,7 +201,7 @@ Partial Class PropertyPage : Inherits SharpPropertyPage
         Me.TabPageBuild.Controls.Add(Me.ListViewBuild)
         Me.TabPageBuild.Location = New System.Drawing.Point(4, 22)
         Me.TabPageBuild.Name = "TabPageBuild"
-        Me.TabPageBuild.Size = New System.Drawing.Size(325, 350)
+        Me.TabPageBuild.Size = New System.Drawing.Size(325, 336)
         Me.TabPageBuild.TabIndex = 1
         Me.TabPageBuild.Text = "Build"
         Me.TabPageBuild.UseVisualStyleBackColor = True
@@ -172,11 +213,12 @@ Partial Class PropertyPage : Inherits SharpPropertyPage
         Me.ListViewBuild.Dock = System.Windows.Forms.DockStyle.Fill
         Me.ListViewBuild.FullRowSelect = True
         Me.ListViewBuild.HeaderStyle = System.Windows.Forms.ColumnHeaderStyle.Nonclickable
+        Me.ListViewBuild.HideSelection = False
         Me.ListViewBuild.Location = New System.Drawing.Point(0, 0)
         Me.ListViewBuild.Name = "ListViewBuild"
         Me.ListViewBuild.ShowItemToolTips = True
-        Me.ListViewBuild.Size = New System.Drawing.Size(325, 350)
-        Me.ListViewBuild.TabIndex = 40
+        Me.ListViewBuild.Size = New System.Drawing.Size(325, 336)
+        Me.ListViewBuild.TabIndex = 0
         Me.ListViewBuild.UseCompatibleStateImageBehavior = False
         Me.ListViewBuild.View = System.Windows.Forms.View.Details
         '
@@ -195,8 +237,8 @@ Partial Class PropertyPage : Inherits SharpPropertyPage
         Me.TabPageIdentity.Controls.Add(Me.ListViewIdentity)
         Me.TabPageIdentity.Location = New System.Drawing.Point(4, 22)
         Me.TabPageIdentity.Name = "TabPageIdentity"
-        Me.TabPageIdentity.Size = New System.Drawing.Size(325, 350)
-        Me.TabPageIdentity.TabIndex = 3
+        Me.TabPageIdentity.Size = New System.Drawing.Size(325, 336)
+        Me.TabPageIdentity.TabIndex = 2
         Me.TabPageIdentity.Text = "Identity"
         Me.TabPageIdentity.UseVisualStyleBackColor = True
         '
@@ -207,11 +249,12 @@ Partial Class PropertyPage : Inherits SharpPropertyPage
         Me.ListViewIdentity.Dock = System.Windows.Forms.DockStyle.Fill
         Me.ListViewIdentity.FullRowSelect = True
         Me.ListViewIdentity.HeaderStyle = System.Windows.Forms.ColumnHeaderStyle.Nonclickable
+        Me.ListViewIdentity.HideSelection = False
         Me.ListViewIdentity.Location = New System.Drawing.Point(0, 0)
         Me.ListViewIdentity.Name = "ListViewIdentity"
         Me.ListViewIdentity.ShowItemToolTips = True
-        Me.ListViewIdentity.Size = New System.Drawing.Size(325, 350)
-        Me.ListViewIdentity.TabIndex = 39
+        Me.ListViewIdentity.Size = New System.Drawing.Size(325, 336)
+        Me.ListViewIdentity.TabIndex = 0
         Me.ListViewIdentity.UseCompatibleStateImageBehavior = False
         Me.ListViewIdentity.View = System.Windows.Forms.View.Details
         '
@@ -225,12 +268,48 @@ Partial Class PropertyPage : Inherits SharpPropertyPage
         Me.ColumnHeader6.Text = "Value"
         Me.ColumnHeader6.Width = 180
         '
+        'TabPageAttributes
+        '
+        Me.TabPageAttributes.Controls.Add(Me.ListViewAttributes)
+        Me.TabPageAttributes.Location = New System.Drawing.Point(4, 22)
+        Me.TabPageAttributes.Name = "TabPageAttributes"
+        Me.TabPageAttributes.Size = New System.Drawing.Size(325, 336)
+        Me.TabPageAttributes.TabIndex = 3
+        Me.TabPageAttributes.Text = "Attributes"
+        Me.TabPageAttributes.UseVisualStyleBackColor = True
+        '
+        'ListViewAttributes
+        '
+        Me.ListViewAttributes.Columns.AddRange(New System.Windows.Forms.ColumnHeader() {Me.ColumnHeader7, Me.ColumnHeader8})
+        Me.ListViewAttributes.ContextMenuStrip = Me.ContextMenuStripListView
+        Me.ListViewAttributes.Dock = System.Windows.Forms.DockStyle.Fill
+        Me.ListViewAttributes.FullRowSelect = True
+        Me.ListViewAttributes.HeaderStyle = System.Windows.Forms.ColumnHeaderStyle.Nonclickable
+        Me.ListViewAttributes.HideSelection = False
+        Me.ListViewAttributes.Location = New System.Drawing.Point(0, 0)
+        Me.ListViewAttributes.Name = "ListViewAttributes"
+        Me.ListViewAttributes.ShowItemToolTips = True
+        Me.ListViewAttributes.Size = New System.Drawing.Size(325, 336)
+        Me.ListViewAttributes.TabIndex = 0
+        Me.ListViewAttributes.UseCompatibleStateImageBehavior = False
+        Me.ListViewAttributes.View = System.Windows.Forms.View.Details
+        '
+        'ColumnHeader7
+        '
+        Me.ColumnHeader7.Text = "Property"
+        Me.ColumnHeader7.Width = 130
+        '
+        'ColumnHeader8
+        '
+        Me.ColumnHeader8.Text = "Value"
+        Me.ColumnHeader8.Width = 180
+        '
         'TabPageReferences
         '
         Me.TabPageReferences.Controls.Add(Me.ListViewReferences)
         Me.TabPageReferences.Location = New System.Drawing.Point(4, 22)
         Me.TabPageReferences.Name = "TabPageReferences"
-        Me.TabPageReferences.Size = New System.Drawing.Size(325, 350)
+        Me.TabPageReferences.Size = New System.Drawing.Size(325, 336)
         Me.TabPageReferences.TabIndex = 4
         Me.TabPageReferences.Text = "References"
         Me.TabPageReferences.UseVisualStyleBackColor = True
@@ -242,11 +321,12 @@ Partial Class PropertyPage : Inherits SharpPropertyPage
         Me.ListViewReferences.Dock = System.Windows.Forms.DockStyle.Fill
         Me.ListViewReferences.FullRowSelect = True
         Me.ListViewReferences.HeaderStyle = System.Windows.Forms.ColumnHeaderStyle.Nonclickable
+        Me.ListViewReferences.HideSelection = False
         Me.ListViewReferences.Location = New System.Drawing.Point(0, 0)
         Me.ListViewReferences.Name = "ListViewReferences"
         Me.ListViewReferences.ShowItemToolTips = True
-        Me.ListViewReferences.Size = New System.Drawing.Size(325, 350)
-        Me.ListViewReferences.TabIndex = 41
+        Me.ListViewReferences.Size = New System.Drawing.Size(325, 336)
+        Me.ListViewReferences.TabIndex = 0
         Me.ListViewReferences.UseCompatibleStateImageBehavior = False
         Me.ListViewReferences.View = System.Windows.Forms.View.Details
         '
@@ -260,6 +340,169 @@ Partial Class PropertyPage : Inherits SharpPropertyPage
         Me.ColumnHeader4.Text = "Version"
         Me.ColumnHeader4.Width = 180
         '
+        'TabPageRuntime
+        '
+        Me.TabPageRuntime.Controls.Add(Me.ListViewRuntime)
+        Me.TabPageRuntime.Location = New System.Drawing.Point(4, 22)
+        Me.TabPageRuntime.Name = "TabPageRuntime"
+        Me.TabPageRuntime.Size = New System.Drawing.Size(325, 336)
+        Me.TabPageRuntime.TabIndex = 5
+        Me.TabPageRuntime.Text = "Runtime"
+        Me.TabPageRuntime.UseVisualStyleBackColor = True
+        '
+        'ListViewRuntime
+        '
+        Me.ListViewRuntime.Columns.AddRange(New System.Windows.Forms.ColumnHeader() {Me.ColumnHeader9, Me.ColumnHeader10})
+        Me.ListViewRuntime.ContextMenuStrip = Me.ContextMenuStripListView
+        Me.ListViewRuntime.Dock = System.Windows.Forms.DockStyle.Fill
+        Me.ListViewRuntime.FullRowSelect = True
+        Me.ListViewRuntime.HeaderStyle = System.Windows.Forms.ColumnHeaderStyle.Nonclickable
+        Me.ListViewRuntime.HideSelection = False
+        Me.ListViewRuntime.Location = New System.Drawing.Point(0, 0)
+        Me.ListViewRuntime.Name = "ListViewRuntime"
+        Me.ListViewRuntime.ShowItemToolTips = True
+        Me.ListViewRuntime.Size = New System.Drawing.Size(325, 336)
+        Me.ListViewRuntime.TabIndex = 0
+        Me.ListViewRuntime.UseCompatibleStateImageBehavior = False
+        Me.ListViewRuntime.View = System.Windows.Forms.View.Details
+        '
+        'ColumnHeader9
+        '
+        Me.ColumnHeader9.Text = "Property"
+        Me.ColumnHeader9.Width = 130
+        '
+        'ColumnHeader10
+        '
+        Me.ColumnHeader10.Text = "Value"
+        Me.ColumnHeader10.Width = 180
+        '
+        'ToolStripMain
+        '
+        Me.ToolStripMain.BackColor = System.Drawing.SystemColors.Window
+        Me.ToolStripMain.Dock = System.Windows.Forms.DockStyle.Fill
+        Me.ToolStripMain.ForeColor = System.Drawing.SystemColors.ControlText
+        Me.ToolStripMain.GripStyle = System.Windows.Forms.ToolStripGripStyle.Hidden
+        Me.ToolStripMain.Items.AddRange(New System.Windows.Forms.ToolStripItem() {Me.ToolStripDropDownButtonExport, Me.ToolStripSplitButtonCopyAll, Me.ToolStripSeparator1, Me.ToolStripButtonCompare, Me.ToolStripSeparator2, Me.ToolStripButtonManifest, Me.ToolStripDropDownButtonConfig, Me.ToolStripSeparator3, Me.ToolStripSplitButtonRegEdit, Me.ToolStripButtonGac})
+        Me.ToolStripMain.Location = New System.Drawing.Point(0, 394)
+        Me.ToolStripMain.Name = "ToolStripMain"
+        Me.ToolStripMain.Size = New System.Drawing.Size(339, 28)
+        Me.ToolStripMain.TabIndex = 2
+        '
+        'ToolStripDropDownButtonExport
+        '
+        Me.ToolStripDropDownButtonExport.DropDownItems.AddRange(New System.Windows.Forms.ToolStripItem() {Me.ExportAllToolStripMenuItem, Me.ExportTabToolStripMenuItem, Me.ExportSelectionToolStripMenuItem})
+        Me.ToolStripDropDownButtonExport.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.ImageAndText
+        Me.ToolStripDropDownButtonExport.Image = Global.My.Resources.Resources.Save
+        Me.ToolStripDropDownButtonExport.ImageTransparentColor = System.Drawing.Color.Magenta
+        Me.ToolStripDropDownButtonExport.Name = "ToolStripDropDownButtonExport"
+        Me.ToolStripDropDownButtonExport.Text = "Export"
+        Me.ToolStripDropDownButtonExport.ToolTipText = "Export the assembly information to a file (TXT, MD, HTML, JSON, XML, CSV)"
+        '
+        'ExportAllToolStripMenuItem
+        '
+        Me.ExportAllToolStripMenuItem.Image = Global.My.Resources.Resources.Save
+        Me.ExportAllToolStripMenuItem.Name = "ExportAllToolStripMenuItem"
+        Me.ExportAllToolStripMenuItem.Size = New System.Drawing.Size(196, 22)
+        Me.ExportAllToolStripMenuItem.Text = "Export All Tabs..."
+        '
+        'ExportTabToolStripMenuItem
+        '
+        Me.ExportTabToolStripMenuItem.Image = Global.My.Resources.Resources.ExportTab
+        Me.ExportTabToolStripMenuItem.Name = "ExportTabToolStripMenuItem"
+        Me.ExportTabToolStripMenuItem.Size = New System.Drawing.Size(196, 22)
+        Me.ExportTabToolStripMenuItem.Text = "Export Current Tab..."
+        '
+        'ExportSelectionToolStripMenuItem
+        '
+        Me.ExportSelectionToolStripMenuItem.Image = Global.My.Resources.Resources.ExportSelection
+        Me.ExportSelectionToolStripMenuItem.Name = "ExportSelectionToolStripMenuItem"
+        Me.ExportSelectionToolStripMenuItem.Size = New System.Drawing.Size(196, 22)
+        Me.ExportSelectionToolStripMenuItem.Text = "Export Selected Rows..."
+        '
+        'ToolStripSplitButtonCopyAll
+        '
+        Me.ToolStripSplitButtonCopyAll.DropDownItems.AddRange(New System.Windows.Forms.ToolStripItem() {Me.CopyAllTextToolStripMenuItem, Me.CopyAllMarkdownToolStripMenuItem})
+        Me.ToolStripSplitButtonCopyAll.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image
+        Me.ToolStripSplitButtonCopyAll.Image = Global.My.Resources.Resources.CopyAll
+        Me.ToolStripSplitButtonCopyAll.ImageTransparentColor = System.Drawing.Color.Magenta
+        Me.ToolStripSplitButtonCopyAll.Name = "ToolStripSplitButtonCopyAll"
+        Me.ToolStripSplitButtonCopyAll.Text = "Copy All"
+        Me.ToolStripSplitButtonCopyAll.ToolTipText = "Copy all the tabs to the clipboard"
+        '
+        'CopyAllTextToolStripMenuItem
+        '
+        Me.CopyAllTextToolStripMenuItem.Image = Global.My.Resources.Resources.CopyAll
+        Me.CopyAllTextToolStripMenuItem.Name = "CopyAllTextToolStripMenuItem"
+        Me.CopyAllTextToolStripMenuItem.Size = New System.Drawing.Size(196, 22)
+        Me.CopyAllTextToolStripMenuItem.Text = "Copy All as Text"
+        '
+        'CopyAllMarkdownToolStripMenuItem
+        '
+        Me.CopyAllMarkdownToolStripMenuItem.Image = Global.My.Resources.Resources.CopyAll
+        Me.CopyAllMarkdownToolStripMenuItem.Name = "CopyAllMarkdownToolStripMenuItem"
+        Me.CopyAllMarkdownToolStripMenuItem.Size = New System.Drawing.Size(196, 22)
+        Me.CopyAllMarkdownToolStripMenuItem.Text = "Copy All as Markdown"
+        '
+        'ToolStripSeparator1
+        '
+        Me.ToolStripSeparator1.Name = "ToolStripSeparator1"
+        Me.ToolStripSeparator1.Size = New System.Drawing.Size(6, 28)
+        '
+        'ToolStripSeparator2
+        '
+        Me.ToolStripSeparator2.Name = "ToolStripSeparator2"
+        Me.ToolStripSeparator2.Size = New System.Drawing.Size(6, 28)
+        '
+        'ToolStripSeparator3
+        '
+        Me.ToolStripSeparator3.Name = "ToolStripSeparator3"
+        Me.ToolStripSeparator3.Size = New System.Drawing.Size(6, 28)
+        '
+        'ToolStripButtonCompare
+        '
+        Me.ToolStripButtonCompare.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image
+        Me.ToolStripButtonCompare.Image = Global.My.Resources.Resources.Compare
+        Me.ToolStripButtonCompare.ImageTransparentColor = System.Drawing.Color.Magenta
+        Me.ToolStripButtonCompare.Name = "ToolStripButtonCompare"
+        Me.ToolStripButtonCompare.Text = "Compare..."
+        Me.ToolStripButtonCompare.ToolTipText = "Compare with another assembly..."
+        '
+        'ToolStripButtonManifest
+        '
+        Me.ToolStripButtonManifest.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image
+        Me.ToolStripButtonManifest.Image = Global.My.Resources.Resources.Manifest
+        Me.ToolStripButtonManifest.ImageTransparentColor = System.Drawing.Color.Magenta
+        Me.ToolStripButtonManifest.Name = "ToolStripButtonManifest"
+        Me.ToolStripButtonManifest.Text = "Win32 Manifest"
+        Me.ToolStripButtonManifest.ToolTipText = "View the Win32 manifest"
+        '
+        'ToolStripDropDownButtonConfig
+        '
+        Me.ToolStripDropDownButtonConfig.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image
+        Me.ToolStripDropDownButtonConfig.Image = Global.My.Resources.Resources.Config
+        Me.ToolStripDropDownButtonConfig.ImageTransparentColor = System.Drawing.Color.Magenta
+        Me.ToolStripDropDownButtonConfig.Name = "ToolStripDropDownButtonConfig"
+        Me.ToolStripDropDownButtonConfig.Text = "Configuration Files"
+        Me.ToolStripDropDownButtonConfig.ToolTipText = "View the configuration files (app.config, runtimeconfig.json, deps.json)"
+        '
+        'ToolStripSplitButtonRegEdit
+        '
+        Me.ToolStripSplitButtonRegEdit.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image
+        Me.ToolStripSplitButtonRegEdit.Image = Global.My.Resources.Resources.RegEdit
+        Me.ToolStripSplitButtonRegEdit.ImageTransparentColor = System.Drawing.Color.Magenta
+        Me.ToolStripSplitButtonRegEdit.Name = "ToolStripSplitButtonRegEdit"
+        Me.ToolStripSplitButtonRegEdit.Text = "Open in Registry Editor"
+        Me.ToolStripSplitButtonRegEdit.ToolTipText = "Open the COM registration in Registry Editor"
+        '
+        'ToolStripButtonGac
+        '
+        Me.ToolStripButtonGac.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image
+        Me.ToolStripButtonGac.Image = Global.My.Resources.Resources.Gac
+        Me.ToolStripButtonGac.ImageTransparentColor = System.Drawing.Color.Magenta
+        Me.ToolStripButtonGac.Name = "ToolStripButtonGac"
+        Me.ToolStripButtonGac.Text = "Show in GAC"
+        Me.ToolStripButtonGac.ToolTipText = "Show the assembly in the Global Assembly Cache folder"
+        '
         'PropertyPage
         '
         Me.AutoScaleDimensions = New System.Drawing.SizeF(6.0!, 13.0!)
@@ -270,25 +513,32 @@ Partial Class PropertyPage : Inherits SharpPropertyPage
         Me.Size = New System.Drawing.Size(339, 422)
         Me.ContextMenuStripListView.ResumeLayout(False)
         Me.TableLayoutPanelMain.ResumeLayout(False)
-        Me.PanelBottom.ResumeLayout(False)
+        Me.TableLayoutPanelMain.PerformLayout()
         Me.TabControlListViews.ResumeLayout(False)
         Me.TabPageProduct.ResumeLayout(False)
         Me.TabPageBuild.ResumeLayout(False)
         Me.TabPageIdentity.ResumeLayout(False)
+        Me.TabPageAttributes.ResumeLayout(False)
         Me.TabPageReferences.ResumeLayout(False)
+        Me.TabPageRuntime.ResumeLayout(False)
+        Me.ToolStripMain.ResumeLayout(False)
+        Me.ToolStripMain.PerformLayout()
         Me.ResumeLayout(False)
 
     End Sub
+    Friend WithEvents ContextMenuStripListView As Windows.Forms.ContextMenuStrip
+    Friend WithEvents CopyToolStripMenuItem As Windows.Forms.ToolStripMenuItem
+    Friend WithEvents CopyValueToolStripMenuItem As Windows.Forms.ToolStripMenuItem
+    Friend WithEvents ToolStripSeparatorContext As Windows.Forms.ToolStripSeparator
+    Friend WithEvents CopySelectedToolStripMenuItem As Windows.Forms.ToolStripMenuItem
+    Friend WithEvents ExportSelectedToolStripMenuItem As Windows.Forms.ToolStripMenuItem
+    Friend WithEvents TableLayoutPanelMain As Windows.Forms.TableLayoutPanel
+    Friend WithEvents TextBoxFilter As Windows.Forms.TextBox
+    Friend WithEvents TabControlListViews As Usercontrols.TabControlFix
+    Friend WithEvents TabPageProduct As Windows.Forms.TabPage
     Friend WithEvents ListViewProduct As Windows.Forms.ListView
     Friend WithEvents ColumnHeaderProperty As Windows.Forms.ColumnHeader
     Friend WithEvents ColumnHeaderValue As Windows.Forms.ColumnHeader
-    Friend WithEvents ContextMenuStripListView As Windows.Forms.ContextMenuStrip
-    Friend WithEvents CopyToolStripMenuItem As Windows.Forms.ToolStripMenuItem
-    Friend WithEvents TableLayoutPanelMain As Windows.Forms.TableLayoutPanel
-    Friend WithEvents PanelBottom As Windows.Forms.Panel
-    Friend WithEvents ButtonSave As Windows.Forms.Button
-    Friend WithEvents TabControlListViews As Usercontrols.TabControlFix
-    Friend WithEvents TabPageProduct As Windows.Forms.TabPage
     Friend WithEvents TabPageBuild As Windows.Forms.TabPage
     Friend WithEvents ListViewBuild As Windows.Forms.ListView
     Friend WithEvents ColumnHeader1 As Windows.Forms.ColumnHeader
@@ -297,10 +547,32 @@ Partial Class PropertyPage : Inherits SharpPropertyPage
     Friend WithEvents ListViewIdentity As Windows.Forms.ListView
     Friend WithEvents ColumnHeader5 As Windows.Forms.ColumnHeader
     Friend WithEvents ColumnHeader6 As Windows.Forms.ColumnHeader
-    Friend WithEvents CopyValueToolStripMenuItem As Windows.Forms.ToolStripMenuItem
+    Friend WithEvents TabPageAttributes As Windows.Forms.TabPage
+    Friend WithEvents ListViewAttributes As Windows.Forms.ListView
+    Friend WithEvents ColumnHeader7 As Windows.Forms.ColumnHeader
+    Friend WithEvents ColumnHeader8 As Windows.Forms.ColumnHeader
     Friend WithEvents TabPageReferences As Windows.Forms.TabPage
     Friend WithEvents ListViewReferences As Windows.Forms.ListView
     Friend WithEvents ColumnHeader3 As Windows.Forms.ColumnHeader
     Friend WithEvents ColumnHeader4 As Windows.Forms.ColumnHeader
+    Friend WithEvents TabPageRuntime As Windows.Forms.TabPage
+    Friend WithEvents ListViewRuntime As Windows.Forms.ListView
+    Friend WithEvents ColumnHeader9 As Windows.Forms.ColumnHeader
+    Friend WithEvents ColumnHeader10 As Windows.Forms.ColumnHeader
+    Friend WithEvents ToolStripMain As Windows.Forms.ToolStrip
+    Friend WithEvents ToolStripDropDownButtonExport As Windows.Forms.ToolStripDropDownButton
+    Friend WithEvents ExportAllToolStripMenuItem As Windows.Forms.ToolStripMenuItem
+    Friend WithEvents ExportTabToolStripMenuItem As Windows.Forms.ToolStripMenuItem
+    Friend WithEvents ExportSelectionToolStripMenuItem As Windows.Forms.ToolStripMenuItem
+    Friend WithEvents ToolStripSplitButtonCopyAll As Windows.Forms.ToolStripSplitButton
+    Friend WithEvents CopyAllTextToolStripMenuItem As Windows.Forms.ToolStripMenuItem
+    Friend WithEvents CopyAllMarkdownToolStripMenuItem As Windows.Forms.ToolStripMenuItem
+    Friend WithEvents ToolStripSeparator1 As Windows.Forms.ToolStripSeparator
+    Friend WithEvents ToolStripButtonCompare As Windows.Forms.ToolStripButton
+    Friend WithEvents ToolStripSeparator2 As Windows.Forms.ToolStripSeparator
+    Friend WithEvents ToolStripButtonManifest As Windows.Forms.ToolStripButton
+    Friend WithEvents ToolStripDropDownButtonConfig As Windows.Forms.ToolStripDropDownButton
+    Friend WithEvents ToolStripSeparator3 As Windows.Forms.ToolStripSeparator
+    Friend WithEvents ToolStripSplitButtonRegEdit As Windows.Forms.ToolStripSplitButton
+    Friend WithEvents ToolStripButtonGac As Windows.Forms.ToolStripButton
 End Class
-

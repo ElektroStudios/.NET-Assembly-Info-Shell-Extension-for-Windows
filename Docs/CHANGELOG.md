@@ -13,7 +13,27 @@
         Strong-Name Signature (signed / delay-signed / not signed) and Module Version ID (MVID).
  -  .NET Core / .NET 5+ and .NET Standard assemblies now show every field, 
       including target framework (e.g. ".NET 8.0", ".NET Standard 2.0"), language, GUID and compilation timestamp.
- -  New "Copy Value" option in the context menu, to copy only the value of the selected row.
+ -  New "Attributes" tab: AssemblyMetadata key/value pairs (e.g. RepositoryUrl, RepositoryCommit, IsTrimmable),
+      InternalsVisibleTo friend assemblies, key file, key container, delay sign, and classes with explicit GUID (COM classes).
+      Neutral Resources Language, CLS Compliant, COM Visible, DPI Awareness Disabled, DLL Import Search Paths
+      and Security Permissions were moved here from the Build tab.
+ -  New "Runtime" tab: single-file bundle details, deployment model (framework-dependent / self-contained), trimmable flag,
+      runtimeconfig.json settings (TFM, frameworks, roll forward, configuration properties), app.config settings
+      (supported runtimes, binding redirects) and Win32 manifest settings (UAC execution level, UI access, DPI awareness,
+      supported OS, Common Controls v6, long path awareness, active code page).
+ -  Support for .NET single-file executables (PublishSingleFile, compressed or not): the property sheet is now shown 
+      for them, with the information of the main assembly embedded in the bundle.
+ -  New toolbar (with icons and tooltips) at the bottom of the property page:
+      - Export: all the tabs, the current tab or the selected rows, in text, Markdown, HTML, JSON, XML or CSV format.
+      - Copy All: copies all the tabs to the clipboard, as plain text or Markdown.
+      - Compare...: compares the assembly with another one, row by row, in a separate window
+        (green = equal, red = different, yellow = missing in one side), with a "Show differences only" option.
+      - Win32 Manifest: shows the embedded manifest XML (with Copy and Save As options).
+      - Configuration Files: shows the app.config, runtimeconfig.json and deps.json files (sidecar or embedded in the bundle).
+      - Open in Registry Editor: opens the COM registration keys (type library and classes), only when they are registered.
+      - Show in GAC: shows the assembly file in the Global Assembly Cache folder, only when it is installed in the GAC.
+ -  New filter box at the top of the property page, that filters the rows of the current tab by name or value (ESC clears it).
+ -  New context menu options: "Copy Value", "Copy Selected Rows" and "Export Selected Rows..." (multiple selection).
  -  Long values (hashes, paths) can be read through tooltips and by scrolling horizontally (auto-sized columns).
 #### 🌟 Improvements:
  -  Assemblies are now read exclusively through their PE headers and ECMA-335 metadata 
@@ -21,7 +41,7 @@
  -  Reorganized fields and clearer names:
       - "PE File Kind" is now "Output Type" (Class Library / Console Application / Windows Application).
       - "Platform" now distinguishes x86, x64, ARM64, ARM and Itanium, and "Any CPU ( Prefer 64-bit )" is now "Any CPU".
-      - "Language" is now "Neutral Resources Language" (Build tab).
+      - "Language" is now "Neutral Resources Language" (Attributes tab).
       - "Product Description" is now "File Description"; "Company Name" is now "Company".
       - "Entry-Point Address" (native stub RVA) was replaced by the managed "Entry Point" method name.
       - Strong-name, public key token and assembly GUID were moved to the Identity tab.
@@ -29,14 +49,20 @@
       - Empty values are shown as "(none)" instead of "(null)".
  -  The compilation timestamp now includes the UTC offset.
  -  Security Permissions now show the requested permission flags (e.g. "RequestMinimum: SecurityPermission (UnmanagedCode)").
+ -  References with version 0.0.0.0 (stored like that by some facades and shims, such as the netstandard.dll shim) 
+      are now shown as "0.0.0.0 (any version)", and retargetable references are flagged as "retargetable".
+ -  References to native DLLs without extension (e.g. "kernel32") are merged with their ".dll" counterparts.
  -  Files that cannot be read now show the error in the property page, instead of failing silently.
  -  The exported report is now saved as UTF-8 (it was saved with the ANSI code page) and includes the References tab.
  -  The detection of .NET assemblies (to show the property sheet) now reads only the PE/CLI headers.
  -  Added an MSTest unit test project (synthetic PE fixtures, no binary files in the repository).
+ -  Added a small WinForms preview project (AssemblyInfo.Preview) that hosts the property page in a regular window,
+      to design and debug it without registering the shell-extension (the UserControl Test Container cannot load its dependencies).
 #### 🐛 Bug Fixes:
  -  Fixed a memory leak: every inspected assembly stayed loaded in Explorer until it was restarted.
  -  Fixed x86-only (32-bit required) assemblies failing to load in the 64-bit Explorer (BadImageFormatException).
  -  Fixed mixed-mode (C++/CLI) assemblies failing to load.
+ -  Fixed ReadyToRun images (e.g. most .NET runtime assemblies) being reported as mixed-mode.
  -  Fixed "File Version" showing the assembly version instead of the file version.
  -  Fixed "GAC Path" always showing "(null)" for assemblies installed in the GAC.
  -  Fixed "Build Configuration" always showing "Release" (it relied on a flag that .NET compilers never set);

@@ -62,7 +62,13 @@ winforms
 
 ## 👋 Introduction
 
-**.NET Assembly Info Shell-Extension for Windows** is a shell extension designed to seamlessly integrate into the Windows File Explorer. It enhances the standard Windows file properties dialog by adding a dedicated, data-rich "**AssemblyInfo**" tab whenever a `.dll` or `.exe` file compiled under .NET Framework or .NET Core is inspected. 
+**.NET Assembly Info Shell-Extension for Windows** is a shell extension designed to seamlessly integrate into the Windows File Explorer. It enhances the standard Windows file properties dialog by adding a dedicated, data-rich "**AssemblyInfo**" tab whenever a `.dll` or `.exe` .NET assembly is inspected, built for any of these platforms:
+
+ - **.NET Framework** (1.x to 4.8.1).
+ - **.NET Core** (1.x to 3.1) and **.NET 5 or newer**, including **single-file** executables (`PublishSingleFile`, compressed or not).
+ - **.NET Standard** libraries (and legacy portable class libraries).
+
+Native AOT executables are not supported, as they do not contain .NET metadata. 
 
 This extension extracts deep metadata, build architectures, security attributes, and identity signatures directly from the assembly's manifest, rendering a comprehensive diagnostic report right inside the OS user interface without requiring heavy external decompilers or development environments.
 
@@ -74,6 +80,31 @@ Windows native property sheets inherently fail to distinguish between standard W
 
 ##### ⚡ The Real Question
 ###### Why waste time opening specialized standalone decompilers or complex IDEs just to verify a target framework, platform architecture, public key token, or compilation timestamp, when you can gather all that critical metadata instantly with a single native right-click?
+
+## ✨ Features
+
+The information is organized in six tabs:
+
+| Tab | Information |
+| :--- | :--- |
+| **Product** | Version resource: file name, product, description, comments, company, copyright, trademarks, product and file versions. |
+| **Build** | Output type, platform (Any CPU, x86, x64, ARM64...), target framework and OS platform, build configuration, optimizations, deterministic build, compilation timestamp, debug symbols (PDB), entry point, mixed-mode (C++/CLI), ReadyToRun, reference assembly and root namespace. |
+| **Identity** | Assembly name, version, culture, full name, strong-name signature, public key token, assembly GUID, module version ID (MVID), Global Assembly Cache (GAC) installation, and MD5, SHA-1 and SHA-256 hashes. |
+| **Attributes** | Neutral resources language, CLS compliance, COM visibility, DPI awareness, DLL import search paths, security permissions, key file/container, delay sign, `InternalsVisibleTo` friend assemblies, COM classes and `AssemblyMetadata` pairs (e.g. RepositoryUrl, RepositoryCommit). |
+| **References** | Referenced assemblies (with version) and native DLLs imported through P/Invoke. |
+| **Runtime** | Single-file bundle details, deployment model (framework-dependent or self-contained), trimming, `runtimeconfig.json` and `app.config` settings (frameworks, roll forward, configuration properties, supported runtimes, binding redirects), and the Win32 manifest settings (UAC execution level, DPI awareness, supported OS, Common Controls v6, long path awareness, active code page). |
+
+And it provides these tools:
+
+ - **Filter box** to show only the rows whose name or value contains a text.
+ - **Export** all the tabs, the current tab or the selected rows to a **text, Markdown, HTML, JSON, XML or CSV** file.
+ - **Copy all** the tabs to the clipboard, as plain text or Markdown (handy for GitHub issues); or copy single rows and values from the context menu.
+ - **Compare** the assembly with another one, row by row: equal rows in green, different rows in red.
+ - **View the Win32 manifest** and the **configuration files** (`app.config`, `runtimeconfig.json`, `deps.json`), sidecar or embedded in a single-file bundle.
+ - **Open in Registry Editor** the COM registration (type library and classes) of the assembly, when it is registered.
+ - **Show in the GAC folder** the assembly file, when it is installed in the Global Assembly Cache.
+
+The assemblies are read exclusively through their PE headers and metadata: they are never loaded into the Explorer process.
 
 ## 🖼️ Screenshots
 
@@ -93,51 +124,100 @@ Windows native property sheets inherently fail to distinguish between standard W
    <br> 
    If you downloaded the `.exe` file, run it and follow the installation wizard.
 
-After you have installed the shell-extension, do right click on a .dll or .exe file (that is built with .NET Framework or .NET Core) to show the file menu,  click on the "Properties" option, and finally you will see a tab with name "AssemblyInfo" (see the 'Screenshots' section of this README).
+After you have installed the shell-extension, do right click on a .dll or .exe file (that is built with .NET Framework, .NET Core / .NET 5+ or .NET Standard) to show the file menu, click on the "Properties" option, and finally you will see a tab with name "AssemblyInfo" (see the 'Screenshots' section of this README).
 
-From the tab with name "AssemblyInfo", you can get see the information that this shell-extension can provide, also, you can use the button with name "Export" to generate a report like in this example:
+From the tab with name "AssemblyInfo", you can see the information that this shell-extension can provide; also, you can use the "Export" button to generate a report like in this example (text format):
 
-    C:\WinExe (AnyCPU, Prefer 32-Bit).exe
+    C:\Program Files\ElektroStudios\.NET Assembly Info Shell-Extension\AssemblyInfo.dll
      
     Product
     -------
-    File Name          : WinExe (AnyCPU, Prefer 32-Bit).exe
-    Original Name      : WinForms Test Assembly.exe
-    Product Name       : WinForms Test Assembly (Any CPU)
-    Product Description: WinForms Test Assembly
-    Company Name       : ElektroStudios
-    Copyright          : Copyright © Elektro Studios 2018
-    File Version       : 1.1.0.0
-    Product Version    : 1.0.0.0
-    Language           : English (United States) (en-US)
+    File Name         : AssemblyInfo.dll
+    Original File Name: AssemblyInfo.dll
+    Product Name      : .NET Assembly Info Shell-Extension
+    File Description  : .NET Assembly Info Shell-Extension
+    Comments          : A shell-extension that shows info about .NET assemblies on the file properties
+    Company           : ElektroStudios
+    Copyright         : Copyright © ElektroStudios 2018-2026
+    Trademarks        : (none)
+    Product Version   : 1.2.0.0
+    File Version      : 1.2.0.0
      
     Build
     -----
-    PE File Kind             : Window application (GUI)
-    Platform                 : Any CPU ( Prefer 32-bit )
-    Build Configuration      : Release
-    CLR Version              : 4.0.30319
-    Target .NET Framework    : 4.6.1
-    Entry-Point Address      : 0x1810A
-    Root Namespace           : WinForms_Test_Assembly
-    Is Strong-Name Signed    : Yes
-    Public Key Token         : 33C6CD5B1C922286
-    Security Permission      : RequestMinimum
-    Dll Import Search Paths  : ApplicationDirectory, System32
-    Is CLS Compliant         : Yes
-    Is COM Visible           : Yes
-    Is DPI Awareness Disabled: No
-    Is Installed in GAC      : No
-    GAC Name                 : (null)
-    GAC Path                 : (null)
+    Output Type             : Class Library (DLL)
+    Platform                : Any CPU
+    Target Framework        : .NET Framework 4.8.1
+    Target OS Platform      : (none)
+    CLR Version             : 4.0.30319
+    Build Configuration     : Release
+    Code Optimizations      : Enabled
+    Deterministic Build     : No
+    Compilation Timestamp   : 09/November/2026 06:54:14 UTC+01:00
+    Debug Symbols (PDB)     : C:\Projects\NET Assembly Info ShellEx\obj\Release\AssemblyInfo.pdb (Windows PDB)
+    Entry Point             : (none)
+    Mixed-Mode (Native Code): No
+    ReadyToRun (Precompiled): No
+    Reference Assembly      : No
+    Root Namespace          : (none)
      
     Identity
     --------
-    Assembly GUID        : B9ADB13A-BC56-4615-8213-9A055D0B1F0F
-    Compilation TimeStamp: 05/November/2018 00:00:31
-    MD5 Hash             : 2513EEE50A84E736693982FA0BB40CA9
-    SHA-1 Hash           : 618F35E78A58E8DFBD20FC28EA91D84FC126E8D0
-    SHA-256 Hash         : 4BF3FF7B98819C9F1FB0B9C260BCF210A119C1B63CC328BF8CD3D8544FF447B5
+    Assembly Name           : AssemblyInfo
+    Assembly Version        : 1.2.0.0
+    Culture                 : neutral
+    Full Name               : AssemblyInfo, Version=1.2.0.0, Culture=neutral, PublicKeyToken=null
+    Strong-Name Signature   : Not signed
+    Public Key Token        : (none)
+    Assembly GUID           : 68951AE5-7484-4EC1-120D-7DD1D4AA8832
+    Module Version ID (MVID): 670E96DF-D9BD-43EF-9E0F-5332F7350B44
+    Installed in GAC        : No
+    GAC Name                : (none)
+    GAC Path                : (none)
+    MD5 Hash                : B6185A0D87F287C530AB3524D8ECCE43
+    SHA-1 Hash              : E85E426C4FCF4EB479E99A3B8487C2DD375322DD
+    SHA-256 Hash            : 7A46E1124C251E3677B729E7C58FB04D20FE7B77AB0C851CE83757D7BC514C90
+     
+    Attributes
+    ----------
+    Neutral Resources Language: English (United States) (en-US)
+    CLS Compliant             : (not specified)
+    COM Visible               : No
+    DPI Awareness Disabled    : No
+    DLL Import Search Paths   : (default)
+    Security Permissions      : (none)
+    Key File                  : (none)
+    Key Container             : (none)
+    Delay Sign                : (not specified)
+    Internals Visible To      : AssemblyInfo.Tests
+     
+    References
+    ----------
+    Microsoft.VisualBasic       : 10.0.0.0
+    mscorlib                    : 4.0.0.0
+    SharpShell                  : 2.7.2.0
+    System                      : 4.0.0.0
+    System.Collections.Immutable: 10.0.0.9
+    System.Core                 : 4.0.0.0
+    System.Drawing              : 4.0.0.0
+    System.Reflection.Metadata  : 10.0.0.9
+    System.Runtime.Serialization: 4.0.0.0
+    System.Windows.Forms        : 4.0.0.0
+    System.Xml                  : 4.0.0.0
+    System.Xml.Linq             : 4.0.0.0
+    Fusion.dll                  : Native library (P/Invoke)
+    user32.dll                  : Native library (P/Invoke)
+     
+    Runtime
+    -------
+    Single-File Bundle                                      : No
+    Deployment                                              : Framework-dependent (.NET Framework)
+    Trimmable                                               : (not specified)
+    Runtime Config                                          : (none)
+    App Config                                              : AssemblyInfo.dll.config (sidecar file)
+    Supported Runtimes                                      : v4.0 (.NETFramework,Version=v4.8.1)
+    Binding Redirect: System.Runtime.CompilerServices.Unsafe: 0.0.0.0-6.0.3.0 -> 6.0.3.0
+    Win32 Manifest                                          : (none)
 
 ## 🔄 Change Log
 
@@ -174,6 +254,7 @@ This work relies on the following technologies, libraries or resources:
 
  - [.NET Framework](https://dotnet.microsoft.com/en-us/download/dotnet-framework)
  - [SharpShell](https://github.com/dwmkerr/sharpshell)
+ - [System.Reflection.Metadata](https://www.nuget.org/packages/System.Reflection.Metadata)
 
 ## ⚠️ Disclaimer
 

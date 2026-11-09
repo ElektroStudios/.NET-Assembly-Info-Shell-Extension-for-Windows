@@ -25,8 +25,8 @@
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.11.0" />
     <PackageReference Include="MSTest.TestAdapter" Version="4.5.2" />
     <PackageReference Include="MSTest.TestFramework" Version="4.5.2" />
-    <!-- Same version as the shell extension (packages.config). Used to emit the synthetic fixture assemblies. -->
-    <PackageReference Include="System.Reflection.Metadata" Version="10.0.9" />
+    <!-- Same version as the shell extension. Used to emit the synthetic fixture assemblies. -->
+    <PackageReference Include="System.Reflection.Metadata" Version="10.0.14" />
   </ItemGroup>
 
   <ItemGroup>

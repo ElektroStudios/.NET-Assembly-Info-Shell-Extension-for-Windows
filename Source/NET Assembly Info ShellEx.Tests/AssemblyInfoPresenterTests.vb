@@ -51,11 +51,12 @@ Public NotInheritable Class AssemblyInfoPresenterTests
     End Sub
 
     <TestMethod>
-    Public Sub CreateGroups_ReturnsTheFourGroupsInTabOrder()
+    Public Sub CreateGroups_ReturnsTheSixGroupsInTabOrder()
         Dim groups As ReadOnlyCollection(Of PropertyGroup) = AssemblyInfoPresenter.CreateGroups(TestHelpers.Inspect(Nothing), TimeZoneInfo.Utc)
 
         CollectionAssert.AreEqual(
-            {PropertyNames.GroupProduct, PropertyNames.GroupBuild, PropertyNames.GroupIdentity, PropertyNames.GroupReferences},
+            {PropertyNames.GroupProduct, PropertyNames.GroupBuild, PropertyNames.GroupIdentity,
+             PropertyNames.GroupAttributes, PropertyNames.GroupReferences, PropertyNames.GroupRuntime},
             groups.Select(Function(g As PropertyGroup) g.Title).ToArray())
     End Sub
 
@@ -92,9 +93,7 @@ Public NotInheritable Class AssemblyInfoPresenterTests
             {PropertyNames.OutputType, PropertyNames.Platform, PropertyNames.TargetFramework, PropertyNames.TargetOsPlatform,
              PropertyNames.ClrVersion, PropertyNames.BuildConfiguration, PropertyNames.CodeOptimizations, PropertyNames.DeterministicBuild,
              PropertyNames.CompilationTimeStamp, PropertyNames.DebugSymbols, PropertyNames.EntryPoint, PropertyNames.MixedMode,
-             PropertyNames.ReadyToRun, PropertyNames.ReferenceAssembly, PropertyNames.RootNamespace, PropertyNames.NeutralResourcesLanguage,
-             PropertyNames.ClsCompliant, PropertyNames.ComVisible, PropertyNames.DpiAwarenessDisabled, PropertyNames.DllImportSearchPaths,
-             PropertyNames.SecurityPermissions},
+             PropertyNames.ReadyToRun, PropertyNames.ReferenceAssembly, PropertyNames.RootNamespace},
             build.Rows.Select(Function(r As PropertyRow) r.Name).ToArray())
     End Sub
 
@@ -125,19 +124,21 @@ Public NotInheritable Class AssemblyInfoPresenterTests
         Assert.AreEqual("Contoso.Program.Main", build.GetValue(PropertyNames.EntryPoint))
         Assert.AreEqual(PropertyNames.NoValue, build.GetValue(PropertyNames.MixedMode))
         Assert.AreEqual("Contoso", build.GetValue(PropertyNames.RootNamespace))
-        Assert.AreEqual($"{CultureInfo.GetCultureInfo("en-US").EnglishName} (en-US)", build.GetValue(PropertyNames.NeutralResourcesLanguage))
-        Assert.AreEqual(PropertyNames.NotSpecifiedValue, build.GetValue(PropertyNames.ClsCompliant))
-        Assert.AreEqual(PropertyNames.NoValue, build.GetValue(PropertyNames.ComVisible))
-        Assert.AreEqual("(default)", build.GetValue(PropertyNames.DllImportSearchPaths))
-        Assert.AreEqual(PropertyNames.NoneValue, build.GetValue(PropertyNames.SecurityPermissions))
+
+        Dim attributes As PropertyGroup = AssemblyInfoPresenterTests.GetGroup(info, PropertyNames.GroupAttributes)
+        Assert.AreEqual($"{CultureInfo.GetCultureInfo("en-US").EnglishName} (en-US)", attributes.GetValue(PropertyNames.NeutralResourcesLanguage))
+        Assert.AreEqual(PropertyNames.NotSpecifiedValue, attributes.GetValue(PropertyNames.ClsCompliant))
+        Assert.AreEqual(PropertyNames.NoValue, attributes.GetValue(PropertyNames.ComVisible))
+        Assert.AreEqual("(default)", attributes.GetValue(PropertyNames.DllImportSearchPaths))
+        Assert.AreEqual(PropertyNames.NoneValue, attributes.GetValue(PropertyNames.SecurityPermissions))
     End Sub
 
     <TestMethod>
     Public Sub CreateGroups_ComVisibleNotSpecified_IsYesByDefault()
         ' Regression: a missing ComVisibleAttribute was shown as "No", but public types are COM-visible by default.
-        Dim build As PropertyGroup = AssemblyInfoPresenterTests.GetGroup(TestHelpers.Inspect(Nothing), PropertyNames.GroupBuild)
+        Dim attributes As PropertyGroup = AssemblyInfoPresenterTests.GetGroup(TestHelpers.Inspect(Nothing), PropertyNames.GroupAttributes)
 
-        Assert.AreEqual("Yes (default)", build.GetValue(PropertyNames.ComVisible))
+        Assert.AreEqual("Yes (default)", attributes.GetValue(PropertyNames.ComVisible))
     End Sub
 
     <TestMethod>
@@ -224,7 +225,7 @@ Public NotInheritable Class AssemblyInfoPresenterTests
         Dim filePath As String = Path.Combine(Path.GetTempPath(), "Folder", "Broken.dll")
         Dim groups As ReadOnlyCollection(Of PropertyGroup) = AssemblyInfoPresenter.CreateErrorGroups(filePath, New BadImageFormatException("Bad image."))
 
-        Assert.AreEqual(4, groups.Count)
+        Assert.AreEqual(6, groups.Count)
         Assert.AreEqual("Broken.dll", groups(0).GetValue(PropertyNames.FileName))
         Assert.AreEqual("BadImageFormatException: Bad image.", groups(0).GetValue(PropertyNames.ErrorRow))
         Assert.IsTrue(groups.Skip(1).All(Function(g As PropertyGroup) g.Rows.Count = 0))

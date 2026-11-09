@@ -71,6 +71,39 @@ reserved As Integer
         ) As Integer
         End Function
 
+        ''' <summary>
+        ''' Sends the specified message to a window, with a string as <c>lParam</c>.
+        ''' </summary>
+        ''' <remarks>
+        ''' <see href="https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-sendmessagew"/>
+        ''' </remarks>
+        ''' <param name="hWnd">
+        ''' A handle to the window whose window procedure will receive the message.
+        ''' </param>
+        ''' 
+        ''' <param name="msg">
+        ''' The message to be sent (e.g. <c>EM_SETCUEBANNER</c>).
+        ''' </param>
+        ''' 
+        ''' <param name="wParam">
+        ''' Additional message-specific information.
+        ''' </param>
+        ''' 
+        ''' <param name="lParam">
+        ''' Additional message-specific information (a Unicode string).
+        ''' </param>
+        ''' <returns>
+        ''' The result of the message processing; it depends on the message sent.
+        ''' </returns>
+        <SuppressUnmanagedCodeSecurity>
+        <DllImport("user32.dll", EntryPoint:="SendMessageW", CharSet:=CharSet.Unicode)>
+        Friend Shared Function SendMessage(hWnd As IntPtr,
+                                           msg As Integer,
+                                           wParam As IntPtr,
+                                           <MarshalAs(UnmanagedType.LPWStr)> lParam As String
+        ) As IntPtr
+        End Function
+
 #End Region
 
 #Region " Hidden Base Members "

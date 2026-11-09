@@ -144,6 +144,31 @@ Namespace Fixtures
             Return New FixtureAttribute("System.Reflection.AssemblyConfigurationAttribute", FixtureArgument.FromString(configuration))
         End Function
 
+        ''' <summary>Creates an <c>AssemblyMetadataAttribute</c>.</summary>
+        Friend Shared Function AssemblyMetadata(key As String, value As String) As FixtureAttribute
+            Return New FixtureAttribute("System.Reflection.AssemblyMetadataAttribute", FixtureArgument.FromString(key), FixtureArgument.FromString(value))
+        End Function
+
+        ''' <summary>Creates an <c>InternalsVisibleToAttribute</c>.</summary>
+        Friend Shared Function InternalsVisibleTo(assemblyName As String) As FixtureAttribute
+            Return New FixtureAttribute("System.Runtime.CompilerServices.InternalsVisibleToAttribute", FixtureArgument.FromString(assemblyName))
+        End Function
+
+        ''' <summary>Creates an <c>AssemblyKeyFileAttribute</c>.</summary>
+        Friend Shared Function KeyFile(path As String) As FixtureAttribute
+            Return New FixtureAttribute("System.Reflection.AssemblyKeyFileAttribute", FixtureArgument.FromString(path))
+        End Function
+
+        ''' <summary>Creates an <c>AssemblyKeyNameAttribute</c>.</summary>
+        Friend Shared Function KeyName(containerName As String) As FixtureAttribute
+            Return New FixtureAttribute("System.Reflection.AssemblyKeyNameAttribute", FixtureArgument.FromString(containerName))
+        End Function
+
+        ''' <summary>Creates an <c>AssemblyDelaySignAttribute</c>.</summary>
+        Friend Shared Function DelaySign(value As Boolean) As FixtureAttribute
+            Return New FixtureAttribute("System.Reflection.AssemblyDelaySignAttribute", FixtureArgument.FromBoolean(value))
+        End Function
+
         ''' <summary>Creates a <c>DebuggableAttribute(DebuggingModes)</c>.</summary>
         Friend Shared Function Debuggable(modes As Integer) As FixtureAttribute
             Return New FixtureAttribute("System.Diagnostics.DebuggableAttribute",

@@ -40,7 +40,7 @@ Namespace AssemblyInspection
 #Region " Public Methods "
 
         ''' <summary>
-        ''' Creates the property groups (Product, Build, Identity and References) of the specified assembly.
+        ''' Creates the property groups (Product, Build, Identity, Attributes, References and Runtime) of the specified assembly.
         ''' </summary>
         ''' <param name="info">
         ''' The assembly information.
@@ -68,7 +68,9 @@ Namespace AssemblyInspection
                 AssemblyInfoPresenter.CreateProductGroup(info),
                 AssemblyInfoPresenter.CreateBuildGroup(info, timeZone),
                 AssemblyInfoPresenter.CreateIdentityGroup(info),
-                AssemblyInfoPresenter.CreateReferencesGroup(info)
+                AssemblyInfoPresenter.CreateAttributesGroup(info),
+                AssemblyInfoPresenter.CreateReferencesGroup(info),
+                AssemblyInfoPresenter.CreateRuntimeGroup(info)
             }
             Return Array.AsReadOnly(groups)
         End Function
@@ -107,7 +109,9 @@ Namespace AssemblyInspection
                 New PropertyGroup(PropertyNames.GroupProduct, errorRows),
                 New PropertyGroup(PropertyNames.GroupBuild, Enumerable.Empty(Of PropertyRow)()),
                 New PropertyGroup(PropertyNames.GroupIdentity, Enumerable.Empty(Of PropertyRow)()),
-                New PropertyGroup(PropertyNames.GroupReferences, Enumerable.Empty(Of PropertyRow)())
+                New PropertyGroup(PropertyNames.GroupAttributes, Enumerable.Empty(Of PropertyRow)()),
+                New PropertyGroup(PropertyNames.GroupReferences, Enumerable.Empty(Of PropertyRow)()),
+                New PropertyGroup(PropertyNames.GroupRuntime, Enumerable.Empty(Of PropertyRow)())
             }
             Return Array.AsReadOnly(groups)
         End Function
@@ -249,7 +253,7 @@ Namespace AssemblyInspection
         End Function
 
         ''' <summary>
-        ''' Formats a referenced assembly (e.g. "4.0.0.0" or "4.0.0.0, es-ES").
+        ''' Formats a referenced assembly (e.g. "4.0.0.0", "4.0.0.0, es-ES", "0.0.0.0 (any version)" or "2.0.5.0, retargetable").
         ''' </summary>
         ''' <param name="reference">
         ''' The referenced assembly name.
@@ -259,8 +263,146 @@ Namespace AssemblyInspection
         ''' </returns>
         Friend Shared Function FormatReference(reference As AssemblyName) As String
 
-            Dim versionText As String = If(reference.Version Is Nothing, "0.0.0.0", reference.Version.ToString())
-            Return If(String.IsNullOrEmpty(reference.CultureName), versionText, $"{versionText}, {reference.CultureName}")
+            Dim parts As New List(Of String)
+            Dim version As Version = If(reference.Version, New Version(0, 0, 0, 0))
+            ' Version 0.0.0.0 is stored literally by some facades/shims: it matches any version at bind time.
+            parts.Add(If(version = New Version(0, 0, 0, 0), $"{version}{PropertyNames.AnyVersionSuffix}", version.ToString()))
+            If Not String.IsNullOrEmpty(reference.CultureName) Then
+                parts.Add(reference.CultureName)
+            End If
+            If (reference.Flags And AssemblyNameFlags.Retargetable) = AssemblyNameFlags.Retargetable Then
+                parts.Add("retargetable")
+            End If
+            Return String.Join(", ", parts)
+        End Function
+
+        ''' <summary>
+        ''' Formats an optional <see cref="Boolean"/> value as "Yes", "No" or "(not specified)".
+        ''' </summary>
+        ''' <param name="value">
+        ''' The value, or <see langword="Nothing"/>.
+        ''' </param>
+        ''' <returns>
+        ''' The formatted value.
+        ''' </returns>
+        Friend Shared Function FormatOptionalBoolean(value As Boolean?) As String
+
+            Return If(value.HasValue, AssemblyInfoPresenter.FormatBoolean(value.Value), PropertyNames.NotSpecifiedValue)
+        End Function
+
+        ''' <summary>
+        ''' Formats an optional setting, replacing null, empty or white-space values with "(not specified)".
+        ''' </summary>
+        ''' <param name="value">
+        ''' The value. It can be <see langword="Nothing"/>.
+        ''' </param>
+        ''' <returns>
+        ''' The trimmed value, or "(not specified)".
+        ''' </returns>
+        Friend Shared Function FormatOptionalText(value As String) As String
+
+            Return If(String.IsNullOrWhiteSpace(value), PropertyNames.NotSpecifiedValue, value.Trim())
+        End Function
+
+        ''' <summary>
+        ''' Formats the single-file bundle information (e.g. "Yes (format v6.0, 171 files, compressed)").
+        ''' </summary>
+        ''' <param name="bundle">
+        ''' The bundle, or <see langword="Nothing"/>.
+        ''' </param>
+        ''' <returns>
+        ''' The formatted bundle information, or "No".
+        ''' </returns>
+        Friend Shared Function FormatBundle(bundle As SingleFileBundle) As String
+
+            If bundle Is Nothing Then
+                Return PropertyNames.NoValue
+            End If
+            Dim compression As String = If(bundle.IsCompressed, ", compressed", String.Empty)
+            Return $"{PropertyNames.YesValue} (format v{bundle.MajorVersion}.{bundle.MinorVersion}, {bundle.Entries.Count} files{compression})"
+        End Function
+
+        ''' <summary>
+        ''' Formats the deployment model of the assembly.
+        ''' </summary>
+        ''' <param name="info">
+        ''' The assembly information.
+        ''' </param>
+        ''' <returns>
+        ''' "Self-contained", "Framework-dependent" (with ", single-file" for bundles),
+        ''' "Framework-dependent (.NET Framework)", or "(unknown)" when there is no runtimeconfig.json to tell.
+        ''' </returns>
+        Friend Shared Function FormatDeployment(info As AssemblyInfo) As String
+
+            Dim singleFile As String = If(info.Bundle Is Nothing, String.Empty, ", single-file")
+            If (info.RuntimeConfig IsNot Nothing) AndAlso info.RuntimeConfig.IsValidJson Then
+                Return $"{If(info.RuntimeConfig.IsSelfContained, "Self-contained", "Framework-dependent")}{singleFile}"
+            End If
+            If info.FrameworkKind = AssemblyFrameworkKind.NetFramework Then
+                Return "Framework-dependent (.NET Framework)"
+            End If
+            Return If(info.Bundle Is Nothing, PropertyNames.UnknownValue, "Single-file")
+        End Function
+
+        ''' <summary>
+        ''' Formats a configuration file (e.g. "MyApp.runtimeconfig.json (sidecar file)").
+        ''' </summary>
+        ''' <param name="file">
+        ''' The configuration file, or <see langword="Nothing"/>.
+        ''' </param>
+        '''
+        ''' <param name="isValid">
+        ''' A value indicating whether the file content could be parsed.
+        ''' </param>
+        ''' <returns>
+        ''' The formatted configuration file, or "(none)".
+        ''' </returns>
+        Friend Shared Function FormatConfigurationFile(file As ConfigurationFile, isValid As Boolean) As String
+
+            If file Is Nothing Then
+                Return PropertyNames.NoneValue
+            End If
+            Dim location As String = If(file.IsEmbedded, "embedded in bundle", "sidecar file")
+            Return If(isValid, $"{file.FileName} ({location})", $"{file.FileName} ({location}, invalid content)")
+        End Function
+
+        ''' <summary>
+        ''' Formats the Win32 manifest presence (e.g. "Yes (resource ID 1)").
+        ''' </summary>
+        ''' <param name="manifest">
+        ''' The manifest, or <see langword="Nothing"/>.
+        ''' </param>
+        ''' <returns>
+        ''' The formatted manifest presence, or "(none)".
+        ''' </returns>
+        Friend Shared Function FormatManifest(manifest As Win32ManifestInfo) As String
+
+            If manifest Is Nothing Then
+                Return PropertyNames.NoneValue
+            End If
+            Dim validity As String = If(manifest.IsValidXml, String.Empty, ", invalid XML")
+            Return $"{PropertyNames.YesValue} (resource ID {manifest.ResourceId}{validity})"
+        End Function
+
+        ''' <summary>
+        ''' Formats the DPI awareness settings of a Win32 manifest (dpiAwareness takes precedence over dpiAware on Windows 10+).
+        ''' </summary>
+        ''' <param name="manifest">
+        ''' The manifest.
+        ''' </param>
+        ''' <returns>
+        ''' The formatted settings (e.g. "PerMonitorV2 (dpiAware: true/pm)"), or "(not specified)".
+        ''' </returns>
+        Friend Shared Function FormatDpiAwareness(manifest As Win32ManifestInfo) As String
+
+            If (manifest.DpiAwareness.Length <> 0) AndAlso (manifest.DpiAware.Length <> 0) Then
+                Return $"{manifest.DpiAwareness} (dpiAware: {manifest.DpiAware})"
+            ElseIf manifest.DpiAwareness.Length <> 0 Then
+                Return manifest.DpiAwareness
+            ElseIf manifest.DpiAware.Length <> 0 Then
+                Return $"dpiAware: {manifest.DpiAware}"
+            End If
+            Return PropertyNames.NotSpecifiedValue
         End Function
 
 #End Region
@@ -309,18 +451,6 @@ Namespace AssemblyInspection
         ''' </returns>
         Private Shared Function CreateBuildGroup(info As AssemblyInfo, timeZone As TimeZoneInfo) As PropertyGroup
 
-            Dim comVisible As String = If(info.IsComVisible.HasValue,
-                                          AssemblyInfoPresenter.FormatBoolean(info.IsComVisible.Value),
-                                          $"{PropertyNames.YesValue} (default)")
-
-            Dim clsCompliant As String = If(info.IsClsCompliant.HasValue,
-                                            AssemblyInfoPresenter.FormatBoolean(info.IsClsCompliant.Value),
-                                            PropertyNames.NotSpecifiedValue)
-
-            Dim dllImportSearchPaths As String = If(info.DefaultDllImportSearchPaths.HasValue,
-                                                    info.DefaultDllImportSearchPaths.Value.ToString(),
-                                                    "(default)")
-
             Dim rows As PropertyRow() = {
                 New PropertyRow(PropertyNames.OutputType, info.OutputType),
                 New PropertyRow(PropertyNames.Platform, info.Platform),
@@ -336,15 +466,123 @@ Namespace AssemblyInspection
                 New PropertyRow(PropertyNames.MixedMode, AssemblyInfoPresenter.FormatBoolean(info.IsMixedMode)),
                 New PropertyRow(PropertyNames.ReadyToRun, AssemblyInfoPresenter.FormatBoolean(info.IsReadyToRun)),
                 New PropertyRow(PropertyNames.ReferenceAssembly, AssemblyInfoPresenter.FormatBoolean(info.IsReferenceAssembly)),
-                New PropertyRow(PropertyNames.RootNamespace, AssemblyInfoPresenter.FormatText(info.RootNamespace)),
+                New PropertyRow(PropertyNames.RootNamespace, AssemblyInfoPresenter.FormatText(info.RootNamespace))
+            }
+            Return New PropertyGroup(PropertyNames.GroupBuild, rows)
+        End Function
+
+        ''' <summary>
+        ''' Creates the "Attributes" group: the assembly-level attributes, including the variable-length lists
+        ''' (friend assemblies, classes with explicit GUID and AssemblyMetadataAttribute pairs).
+        ''' </summary>
+        ''' <param name="info">
+        ''' The assembly information.
+        ''' </param>
+        ''' <returns>
+        ''' The property group.
+        ''' </returns>
+        Private Shared Function CreateAttributesGroup(info As AssemblyInfo) As PropertyGroup
+
+            Dim comVisible As String = If(info.IsComVisible.HasValue,
+                                          AssemblyInfoPresenter.FormatBoolean(info.IsComVisible.Value),
+                                          $"{PropertyNames.YesValue} (default)")
+
+            Dim dllImportSearchPaths As String = If(info.DefaultDllImportSearchPaths.HasValue,
+                                                    info.DefaultDllImportSearchPaths.Value.ToString(),
+                                                    "(default)")
+
+            Dim rows As New List(Of PropertyRow) From {
                 New PropertyRow(PropertyNames.NeutralResourcesLanguage, AssemblyInfoPresenter.FormatCulture(info.NeutralResourcesLanguage, info.DefaultCulture)),
-                New PropertyRow(PropertyNames.ClsCompliant, clsCompliant),
+                New PropertyRow(PropertyNames.ClsCompliant, AssemblyInfoPresenter.FormatOptionalBoolean(info.IsClsCompliant)),
                 New PropertyRow(PropertyNames.ComVisible, comVisible),
                 New PropertyRow(PropertyNames.DpiAwarenessDisabled, AssemblyInfoPresenter.FormatBoolean(info.IsDpiAwarenessDisabled)),
                 New PropertyRow(PropertyNames.DllImportSearchPaths, dllImportSearchPaths),
-                New PropertyRow(PropertyNames.SecurityPermissions, AssemblyInfoPresenter.FormatText(info.SecurityPermission))
+                New PropertyRow(PropertyNames.SecurityPermissions, AssemblyInfoPresenter.FormatText(info.SecurityPermission)),
+                New PropertyRow(PropertyNames.KeyFile, AssemblyInfoPresenter.FormatText(info.KeyFile)),
+                New PropertyRow(PropertyNames.KeyContainer, AssemblyInfoPresenter.FormatText(info.KeyName)),
+                New PropertyRow(PropertyNames.DelaySign, AssemblyInfoPresenter.FormatOptionalBoolean(info.DelaySign))
             }
-            Return New PropertyGroup(PropertyNames.GroupBuild, rows)
+
+            If info.InternalsVisibleTo.Count = 0 Then
+                rows.Add(New PropertyRow(PropertyNames.InternalsVisibleTo, PropertyNames.NoneValue))
+            Else
+                For Each friendAssembly As String In info.InternalsVisibleTo
+                    rows.Add(New PropertyRow(PropertyNames.InternalsVisibleTo, AssemblyInfoPresenter.FormatText(friendAssembly)))
+                Next friendAssembly
+            End If
+
+            For Each comClass As KeyValuePair(Of String, Guid) In info.ComClasses
+                rows.Add(New PropertyRow($"{PropertyNames.ComClassPrefix}{comClass.Key}", comClass.Value.ToString("B").ToUpperInvariant()))
+            Next comClass
+
+            For Each pair As KeyValuePair(Of String, String) In info.AssemblyMetadata
+                rows.Add(New PropertyRow($"{PropertyNames.MetadataPrefix}{pair.Key}", AssemblyInfoPresenter.FormatText(pair.Value)))
+            Next pair
+
+            Return New PropertyGroup(PropertyNames.GroupAttributes, rows)
+        End Function
+
+        ''' <summary>
+        ''' Creates the "Runtime" group: single-file bundle, deployment model, configuration files and Win32 manifest.
+        ''' <para></para>
+        ''' The detail rows of each configuration file and of the manifest are only included when it exists and is valid.
+        ''' </summary>
+        ''' <param name="info">
+        ''' The assembly information.
+        ''' </param>
+        ''' <returns>
+        ''' The property group.
+        ''' </returns>
+        Private Shared Function CreateRuntimeGroup(info As AssemblyInfo) As PropertyGroup
+
+            Dim rows As New List(Of PropertyRow) From {
+                New PropertyRow(PropertyNames.SingleFileBundle, AssemblyInfoPresenter.FormatBundle(info.Bundle))
+            }
+            If info.Bundle IsNot Nothing Then
+                rows.Add(New PropertyRow(PropertyNames.BundledMainAssembly, info.BundleMainAssembly.RelativePath))
+                rows.Add(New PropertyRow(PropertyNames.BundleHostPlatform, info.BundleHostPlatform))
+            End If
+
+            rows.Add(New PropertyRow(PropertyNames.Deployment, AssemblyInfoPresenter.FormatDeployment(info)))
+            rows.Add(New PropertyRow(PropertyNames.Trimmable, AssemblyInfoPresenter.FormatOptionalBoolean(info.IsTrimmable)))
+
+            ' runtimeconfig.json
+            Dim runtimeConfigFile As ConfigurationFile = info.GetConfigurationFile(ConfigurationFileKind.RuntimeConfig)
+            rows.Add(New PropertyRow(PropertyNames.RuntimeConfig, AssemblyInfoPresenter.FormatConfigurationFile(runtimeConfigFile, info.RuntimeConfig IsNot Nothing AndAlso info.RuntimeConfig.IsValidJson)))
+            If (info.RuntimeConfig IsNot Nothing) AndAlso info.RuntimeConfig.IsValidJson Then
+                Dim config As RuntimeConfigInfo = info.RuntimeConfig
+                rows.Add(New PropertyRow(PropertyNames.RuntimeConfigTfm, AssemblyInfoPresenter.FormatText(config.TargetFrameworkMoniker)))
+                rows.Add(New PropertyRow(PropertyNames.Frameworks, If(config.Frameworks.Count = 0, PropertyNames.NoneValue, String.Join("; ", config.Frameworks))))
+                rows.Add(New PropertyRow(PropertyNames.RollForward, If(config.RollForward.Length = 0, "(default)", config.RollForward)))
+                For Each pair As KeyValuePair(Of String, String) In config.ConfigProperties
+                    rows.Add(New PropertyRow($"{PropertyNames.ConfigPropertyPrefix}{pair.Key}", pair.Value))
+                Next pair
+            End If
+
+            ' app.config
+            Dim appConfigFile As ConfigurationFile = info.GetConfigurationFile(ConfigurationFileKind.AppConfig)
+            rows.Add(New PropertyRow(PropertyNames.AppConfig, AssemblyInfoPresenter.FormatConfigurationFile(appConfigFile, info.AppConfig IsNot Nothing AndAlso info.AppConfig.IsValidXml)))
+            If (info.AppConfig IsNot Nothing) AndAlso info.AppConfig.IsValidXml Then
+                rows.Add(New PropertyRow(PropertyNames.SupportedRuntimes, If(info.AppConfig.SupportedRuntimes.Count = 0, PropertyNames.NotSpecifiedValue, String.Join("; ", info.AppConfig.SupportedRuntimes))))
+                For Each redirect As BindingRedirectInfo In info.AppConfig.BindingRedirects
+                    rows.Add(New PropertyRow($"{PropertyNames.BindingRedirectPrefix}{redirect.AssemblyName}", $"{redirect.OldVersion} -> {redirect.NewVersion}"))
+                Next redirect
+            End If
+
+            ' Win32 manifest
+            Dim manifest As Win32ManifestInfo = info.Win32Manifest
+            rows.Add(New PropertyRow(PropertyNames.Win32Manifest, AssemblyInfoPresenter.FormatManifest(manifest)))
+            If (manifest IsNot Nothing) AndAlso manifest.IsValidXml Then
+                rows.Add(New PropertyRow(PropertyNames.ExecutionLevel, AssemblyInfoPresenter.FormatOptionalText(manifest.RequestedExecutionLevel)))
+                rows.Add(New PropertyRow(PropertyNames.UIAccess, AssemblyInfoPresenter.FormatOptionalText(manifest.UIAccess)))
+                rows.Add(New PropertyRow(PropertyNames.DpiAwareness, AssemblyInfoPresenter.FormatDpiAwareness(manifest)))
+                rows.Add(New PropertyRow(PropertyNames.SupportedOS, If(manifest.SupportedOperatingSystems.Count = 0, PropertyNames.NotSpecifiedValue, String.Join(", ", manifest.SupportedOperatingSystems))))
+                rows.Add(New PropertyRow(PropertyNames.CommonControlsV6, AssemblyInfoPresenter.FormatBoolean(manifest.UsesCommonControlsV6)))
+                rows.Add(New PropertyRow(PropertyNames.LongPathAware, AssemblyInfoPresenter.FormatOptionalText(manifest.LongPathAware)))
+                rows.Add(New PropertyRow(PropertyNames.ActiveCodePage, AssemblyInfoPresenter.FormatOptionalText(manifest.ActiveCodePage)))
+            End If
+
+            Return New PropertyGroup(PropertyNames.GroupRuntime, rows)
         End Function
 
         ''' <summary>

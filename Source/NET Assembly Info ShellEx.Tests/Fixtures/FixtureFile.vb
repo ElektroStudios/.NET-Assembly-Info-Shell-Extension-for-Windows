@@ -48,12 +48,50 @@ Namespace Fixtures
                 Throw New ArgumentNullException(NameOf(content))
             End If
 
-            Dim directory As String = IO.Path.Combine(IO.Path.GetTempPath(), "AssemblyInfo.Tests")
-            IO.Directory.CreateDirectory(directory)
-
-            Me.Path = IO.Path.Combine(directory, $"{Guid.NewGuid():N}{extension}")
+            Me.Path = IO.Path.Combine(FixtureFile.GetTempDirectory(), $"{Guid.NewGuid():N}{extension}")
             File.WriteAllBytes(Me.Path, content)
         End Sub
+
+        ''' <summary>Initializes a new instance of the <see cref="FixtureFile"/> class, writing the content to the exact specified path.</summary>
+        Private Sub New(path As String, content As Byte())
+            Me.Path = path
+            File.WriteAllBytes(Me.Path, content)
+        End Sub
+
+        ''' <summary>
+        ''' Creates a temporary file with a specific file name, inside a new unique temporary directory
+        ''' (so the name cannot collide with other tests).
+        ''' </summary>
+        ''' <param name="content">The file content.</param>
+        ''' <param name="fileNameWithoutExtension">The file name, without extension.</param>
+        ''' <param name="extension">The file extension, including the dot.</param>
+        ''' <returns>
+        ''' The temporary file.
+        ''' </returns>
+        Friend Shared Function CreateNamed(content As Byte(), fileNameWithoutExtension As String, extension As String) As FixtureFile
+            Dim directory As String = IO.Path.Combine(FixtureFile.GetTempDirectory(), Guid.NewGuid().ToString("N"))
+            IO.Directory.CreateDirectory(directory)
+            Return New FixtureFile(IO.Path.Combine(directory, $"{fileNameWithoutExtension}{extension}"), content)
+        End Function
+
+        ''' <summary>
+        ''' Creates a sidecar text file (UTF-8) at the exact specified path.
+        ''' </summary>
+        ''' <param name="path">The file path.</param>
+        ''' <param name="text">The file content.</param>
+        ''' <returns>
+        ''' The temporary file.
+        ''' </returns>
+        Friend Shared Function CreateSidecar(path As String, text As String) As FixtureFile
+            Return New FixtureFile(path, System.Text.Encoding.UTF8.GetBytes(text))
+        End Function
+
+        ''' <summary>Gets (and creates) the root temporary directory of the fixtures.</summary>
+        Private Shared Function GetTempDirectory() As String
+            Dim directory As String = IO.Path.Combine(IO.Path.GetTempPath(), "AssemblyInfo.Tests")
+            IO.Directory.CreateDirectory(directory)
+            Return directory
+        End Function
 
 #End Region
 
