@@ -640,8 +640,13 @@ Public NotInheritable Class AssemblyInfo
         Me.RuntimeConfig = If(runtimeConfigFile Is Nothing, Nothing, New RuntimeConfigInfo(runtimeConfigFile.Content))
 
         ' Hashes of the file on disk (for bundles, the whole bundle file).
+        ' S4790: MD5 and SHA-1 are not used here for any security purpose (integrity, authentication or signing);
+        ' they are informational checksums to identify and compare the file against third-party sources.
+        ' SHA-256 is also provided for anyone that needs a collision-resistant hash.
+#Disable Warning S4790 ' Using weak hashing algorithms is security-sensitive
         Me.MD5Hash = AssemblyInfo.ComputeHash(MD5.Create(), rawFile)
         Me.SHA1Hash = AssemblyInfo.ComputeHash(SHA1.Create(), rawFile)
+#Enable Warning S4790
         Me.SHA256Hash = AssemblyInfo.ComputeHash(SHA256.Create(), rawFile)
 
         Me.FileVersionInfo = FileVersionInfo.GetVersionInfo(filepath)
@@ -1610,7 +1615,11 @@ Public NotInheritable Class AssemblyInfo
         End If
 
         Dim hash As Byte()
+        ' S4790: SHA-1 is mandated by the ECMA-335 specification to derive the public key token;
+        ' any other algorithm would produce a token that does not match the one the CLR, the GAC and the references use.
+#Disable Warning S4790 ' Using weak hashing algorithms is security-sensitive
         Using sha As SHA1 = SHA1.Create()
+#Enable Warning S4790
             hash = sha.ComputeHash(publicKey)
         End Using
 
