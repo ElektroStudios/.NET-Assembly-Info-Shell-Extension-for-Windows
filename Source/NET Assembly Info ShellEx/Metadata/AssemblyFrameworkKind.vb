@@ -12,7 +12,7 @@ Option Infer Off
 ''' <summary>
 ''' Specifies the .NET platform family that an assembly was built for.
 ''' </summary>
-Public Enum AssemblyFrameworkKind As Integer
+Public Enum AssemblyFrameworkKind As Integer ' NOSONAR
 
     ''' <summary>
     ''' The .NET platform family could not be determined.

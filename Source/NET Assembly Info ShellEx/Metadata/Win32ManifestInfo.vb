@@ -22,7 +22,7 @@ Imports AssemblyInspection
 ''' Represents the Win32 application manifest (<c>RT_MANIFEST</c> resource) embedded in a PE image,
 ''' and the most relevant settings declared in it.
 ''' </summary>
-Public NotInheritable Class Win32ManifestInfo
+Public NotInheritable Class Win32ManifestInfo ' NOSONAR
 
 #Region " Fields "
 

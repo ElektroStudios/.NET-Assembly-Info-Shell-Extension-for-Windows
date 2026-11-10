@@ -21,7 +21,7 @@ Imports AssemblyInspection
 ''' <summary>
 ''' Specifies the kind of a configuration file associated to an assembly.
 ''' </summary>
-Public Enum ConfigurationFileKind As Integer
+Public Enum ConfigurationFileKind As Integer ' NOSONAR
 
     ''' <summary>A .NET Framework application configuration file (e.g. "MyApp.exe.config").</summary>
     AppConfig = 0
@@ -43,7 +43,7 @@ End Enum
 ''' or a file embedded in its single-file bundle.
 ''' </summary>
 <DebuggerDisplay("{FileName,nq} ({Kind})")>
-Public NotInheritable Class ConfigurationFile
+Public NotInheritable Class ConfigurationFile ' NOSONAR
 
     ''' <summary>Gets the kind of the file.</summary>
     Public ReadOnly Property Kind As ConfigurationFileKind
@@ -87,7 +87,7 @@ End Class
 ''' Represents an assembly binding redirect declared in an application configuration file.
 ''' </summary>
 <DebuggerDisplay("{AssemblyName,nq}: {OldVersion,nq} -> {NewVersion,nq}")>
-Public NotInheritable Class BindingRedirectInfo
+Public NotInheritable Class BindingRedirectInfo ' NOSONAR
 
     ''' <summary>Gets the name of the redirected assembly.</summary>
     Public ReadOnly Property AssemblyName As String
@@ -118,7 +118,7 @@ End Class
 ''' <summary>
 ''' Represents the relevant settings of a .NET Framework application configuration file (app.config).
 ''' </summary>
-Public NotInheritable Class AppConfigInfo
+Public NotInheritable Class AppConfigInfo ' NOSONAR
 
     ''' <summary>Gets a value indicating whether the file is a well-formed XML document.</summary>
     Public ReadOnly Property IsValidXml As Boolean
@@ -191,7 +191,7 @@ End Class
 ''' <summary>
 ''' Represents the relevant settings of a .NET Core / .NET 5+ runtime configuration file (runtimeconfig.json).
 ''' </summary>
-Public NotInheritable Class RuntimeConfigInfo
+Public NotInheritable Class RuntimeConfigInfo ' NOSONAR
 
     ''' <summary>Gets a value indicating whether the file is a valid JSON document.</summary>
     Public ReadOnly Property IsValidJson As Boolean

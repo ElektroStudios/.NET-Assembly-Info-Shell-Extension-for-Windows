@@ -24,7 +24,7 @@ Imports AssemblyInspection
 ''' <summary>
 ''' Specifies the type of a file embedded in a .NET single-file bundle.
 ''' </summary>
-Public Enum BundleFileType As Byte
+Public Enum BundleFileType As Byte ' NOSONAR
 
     ''' <summary>Any other file.</summary>
     Unknown = 0

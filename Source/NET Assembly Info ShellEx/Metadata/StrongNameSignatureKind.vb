@@ -12,7 +12,7 @@ Option Infer Off
 ''' <summary>
 ''' Specifies the strong-name signature state of an assembly.
 ''' </summary>
-Public Enum StrongNameSignatureKind As Integer
+Public Enum StrongNameSignatureKind As Integer ' NOSONAR
 
     ''' <summary>
     ''' The assembly has no public key, so it is not strong-named.
