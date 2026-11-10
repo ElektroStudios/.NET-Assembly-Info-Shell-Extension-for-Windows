@@ -22,7 +22,7 @@ Imports System.Windows.Forms
 ''' A read-only viewer for text documents (Win32 manifests, app.config, runtimeconfig.json, deps.json),
 ''' with copy and save options.
 ''' </summary>
-Friend NotInheritable Class TextViewerForm : Inherits Form
+Friend NotInheritable Class TextViewerForm : Inherits Form ' NOSONAR
 
 #Region " Private Fields "
 

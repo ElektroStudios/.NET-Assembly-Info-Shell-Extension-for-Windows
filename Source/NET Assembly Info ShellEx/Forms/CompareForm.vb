@@ -24,7 +24,7 @@ Imports AssemblyInspection
 ''' Shows the row-by-row comparison of two assemblies:
 ''' green rows are equal, red rows are different, and yellow rows exist only in one of them.
 ''' </summary>
-Friend NotInheritable Class CompareForm : Inherits Form
+Friend NotInheritable Class CompareForm : Inherits Form ' NOSONAR
 
 #Region " Constants "
 

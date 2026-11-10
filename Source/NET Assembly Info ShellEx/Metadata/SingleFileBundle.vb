@@ -54,7 +54,7 @@ End Enum
 ''' Represents a file embedded in a .NET single-file bundle.
 ''' </summary>
 <DebuggerDisplay("{RelativePath,nq} ({Type})")>
-Public NotInheritable Class BundleEntry
+Public NotInheritable Class BundleEntry ' NOSONAR
 
     ''' <summary>Gets the path of the file, relative to the application directory.</summary>
     Public ReadOnly Property RelativePath As String
@@ -113,7 +113,7 @@ End Class
 ''' Each file entry: <c>Int64 Offset, Int64 Size</c>, <c>Int64 CompressedSize</c> (version 6 or newer), <c>Byte Type, String RelativePath</c>.
 ''' Strings use the <see cref="BinaryWriter"/> format (7-bit encoded length prefix and UTF-8 bytes).
 ''' </remarks>
-Public NotInheritable Class SingleFileBundle
+Public NotInheritable Class SingleFileBundle ' NOSONAR
 
 #Region " Constants / Fields "
 

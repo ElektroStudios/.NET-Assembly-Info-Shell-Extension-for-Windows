@@ -1482,10 +1482,20 @@ Public NotInheritable Class AssemblyInfo
                 End If
             End If
 
-            If (namespaceName.Length <> 0) AndAlso
-               Not ignoredNamespacePrefixes.Any(Function(prefix As String) namespaceName.StartsWith(prefix, StringComparison.Ordinal)) Then
-                userNamespaces.Add(namespaceName)
+            If namespaceName.Length <> 0 Then
+                Dim isIgnored As Boolean = False
+                For i As Integer = 0 To ignoredNamespacePrefixes.Length - 1
+                    If namespaceName.StartsWith(ignoredNamespacePrefixes(i), StringComparison.Ordinal) Then
+                        isIgnored = True
+                        Exit For
+                    End If
+                Next i
+
+                If Not isIgnored Then
+                    userNamespaces.Add(namespaceName)
+                End If
             End If
+
         Next handle
 
         Return AssemblyInfo.GetCommonNamespace(userNamespaces)

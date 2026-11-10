@@ -66,19 +66,34 @@ Namespace AssemblyInspection
         Friend Function ResolveMachine(rawMachine As Machine, ByRef targetOs As String) As Machine
 
             targetOs = String.Empty
-            If PeImageInspector.KnownMachines.Contains(rawMachine) Then
+            If PeImageInspector.IsKnownMachine(rawMachine) Then
                 Return rawMachine
             End If
 
             For Each pair As KeyValuePair(Of Integer, String) In PeImageInspector.ReadyToRunOsMachineOverrides
                 Dim candidate As Machine = CType(CInt(rawMachine) Xor pair.Key, Machine)
-                If PeImageInspector.KnownMachines.Contains(candidate) Then
+                If PeImageInspector.IsKnownMachine(candidate) Then
                     targetOs = pair.Value
                     Return candidate
                 End If
             Next pair
 
             Return rawMachine
+        End Function
+
+        ''' <summary>
+        ''' Determines whether the specified machine type is one of the known machine types.
+        ''' </summary>
+        ''' <param name="machine">
+        ''' The machine type to check.
+        ''' </param>
+        ''' <returns>
+        ''' <see langword="True"/> if <paramref name="machine"/> is a known machine type; 
+        ''' otherwise, <see langword="False"/>.
+        ''' </returns>
+        <DebuggerStepThrough>
+        Private Function IsKnownMachine(machine As Machine) As Boolean
+            Return PeImageInspector.KnownMachines.Contains(machine)
         End Function
 
         ''' <summary>
