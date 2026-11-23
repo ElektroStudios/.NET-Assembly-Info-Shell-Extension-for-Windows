@@ -58,7 +58,7 @@ Namespace AssemblyInspection
             End If
 
             Dim bytes As Byte() = Encoding.UTF8.GetBytes(json)
-            Using reader As XmlDictionaryReader = JsonReaderWriterFactory.CreateJsonReader(bytes, XmlDictionaryReaderQuotas.Max)
+            Using reader As XmlDictionaryReader = JsonReaderWriterFactory.CreateJsonReader(bytes, New XmlDictionaryReaderQuotas With {.MaxDepth = 128, .MaxStringContentLength = Integer.MaxValue, .MaxArrayLength = Integer.MaxValue, .MaxNameTableCharCount = Integer.MaxValue})
                 Return XElement.Load(reader)
             End Using
         End Function

@@ -482,8 +482,8 @@ Partial Class PropertyPage : Inherits SharpPropertyPage
         Me.ToolStripDropDownButtonConfig.Image = Global.My.Resources.Resources.Config
         Me.ToolStripDropDownButtonConfig.ImageTransparentColor = System.Drawing.Color.Magenta
         Me.ToolStripDropDownButtonConfig.Name = "ToolStripDropDownButtonConfig"
-        Me.ToolStripDropDownButtonConfig.Text = "Configuration Files"
-        Me.ToolStripDropDownButtonConfig.ToolTipText = "View the configuration files (app.config, runtimeconfig.json, deps.json)"
+        Me.ToolStripDropDownButtonConfig.Text = "Configuration and Inspection Details"
+        Me.ToolStripDropDownButtonConfig.ToolTipText = "View configuration files, P/Invoke imports and bundle contents"
         '
         'ToolStripSplitButtonRegEdit
         '

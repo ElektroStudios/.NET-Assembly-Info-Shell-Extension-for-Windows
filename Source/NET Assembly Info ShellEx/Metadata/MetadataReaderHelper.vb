@@ -52,6 +52,7 @@ Namespace AssemblyInspection
 
             ' Walk up the declaring types iteratively (no recursion).
             Do
+                If names.Count >= 256 Then Throw New BadImageFormatException("Invalid or excessive nested type depth.")
                 Dim definition As TypeDefinition = reader.GetTypeDefinition(current)
                 names.Insert(0, reader.GetString(definition.Name))
 

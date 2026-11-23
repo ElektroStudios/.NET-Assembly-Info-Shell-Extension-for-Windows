@@ -29,6 +29,15 @@ Namespace AssemblyInspection
         ''' </summary>
         Friend ReadOnly Property Value As String
 
+        ''' <summary>Gets the detailed table cells for a multi-column row.</summary>
+        Friend ReadOnly Property Cells As System.Collections.ObjectModel.ReadOnlyCollection(Of String)
+
+        ''' <summary>Creates a detailed row with its name and searchable report value.</summary>
+        Friend Sub New(name As String, value As String, cells As String())
+            Me.New(name, value)
+            Me.Cells = Array.AsReadOnly(cells)
+        End Sub
+
 #End Region
 
 #Region " Constructors "

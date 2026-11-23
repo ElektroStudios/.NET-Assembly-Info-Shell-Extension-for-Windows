@@ -55,6 +55,58 @@ Namespace AssemblyInspection
     ''' </summary>
     Friend NotInheritable Class AssemblyInfoReport
 
+        ''' <summary>Returns headers shared by the tab and the plain-text imports report.</summary>
+        Friend Shared Function ImportHeaders() As String()
+            Return {"Managed Method", "Native Library", "Entry Point", "Calling Convention", "Character Set", "SetLastError"}
+        End Function
+
+        ''' <summary>Formats import records as a fixed-width table for the monospace viewer.</summary>
+        Friend Shared Function FormatImports(rows As IEnumerable(Of PropertyRow)) As String
+            Dim headers As String() = ImportHeaders()
+            Dim widths As Integer() = headers.Select(Function(header As String) header.Length).ToArray()
+            For Each row As PropertyRow In rows
+                For i As Integer = 0 To widths.Length - 1
+                    widths(i) = Math.Max(widths(i), row.Cells(i).Length)
+                Next
+            Next
+            Dim lines As New StringBuilder()
+            AppendImportLine(lines, headers, widths)
+            For Each row As PropertyRow In rows
+                AppendImportLine(lines, row.Cells, widths)
+            Next
+            Return lines.ToString()
+        End Function
+
+        ''' <summary>Writes one line with two spaces between aligned columns.</summary>
+        Private Shared Sub AppendImportLine(lines As StringBuilder, cells As IList(Of String), widths As Integer())
+            For index As Integer = 0 To widths.Length - 1
+                If index > 0 Then lines.Append("  ")
+                Dim cell As String = cells(index)
+                lines.Append(If(index = widths.Length - 1, cell, cell.PadRight(widths(index))))
+            Next
+            lines.AppendLine()
+        End Sub
+
+        ''' <summary>Converts a suggested report name to a single Windows file name.</summary>
+        Friend Shared Function SafeFileName(value As String) As String
+            Dim result As New StringBuilder(value.Length)
+            Const Forbidden As String = "<>:""/\|?*"
+            For Each c As Char In value
+                result.Append(If(Convert.ToInt32(c) < 32 OrElse Forbidden.IndexOf(c) >= 0, "_"c, c))
+            Next
+            Dim name As String = result.ToString().TrimEnd(" "c, "."c)
+            If name.Length = 0 Then Return "Report.txt"
+            Dim stem As String = name.Split("."c)(0).TrimEnd().ToUpperInvariant()
+            If System.Text.RegularExpressions.Regex.IsMatch(stem, "^(CON|PRN|AUX|NUL|CONIN\$|CONOUT\$|(COM|LPT)[1-9¹²³])$") Then name = "_" & name
+            If name.Length > 255 Then
+                Dim extension As String = Path.GetExtension(name)
+                If extension.Length > 32 Then extension = String.Empty
+                name = name.Substring(0, 255 - extension.Length).TrimEnd(" "c, "."c) & extension
+            End If
+            Return name
+        End Function
+
+
 #Region " Constants "
 
         ''' <summary>The filter of the export dialog, in <see cref="ReportFormat"/> order.</summary>

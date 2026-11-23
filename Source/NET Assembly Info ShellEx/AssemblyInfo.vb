@@ -469,6 +469,21 @@ Public NotInheritable Class AssemblyInfo
     ''' </summary>
     Public ReadOnly Property ComClasses As ReadOnlyCollection(Of KeyValuePair(Of String, Guid))
 
+    ''' <summary>Gets the adjacent managed entry assembly of an ordinary SDK apphost.</summary>
+    Public ReadOnly Property AppHostAssembly As String
+
+    ''' <summary>Gets the RID explicitly recorded in the dependency manifest.</summary>
+    Public ReadOnly Property PublishedRuntimeIdentifier As String
+
+    ''' <summary>Gets the individual native method imports.</summary>
+    Friend ReadOnly Property NativeImports As ReadOnlyCollection(Of PropertyRow)
+
+    ''' <summary>Gets the types forwarded to other assemblies.</summary>
+    Friend ReadOnly Property ForwardedTypes As ReadOnlyCollection(Of PropertyRow)
+
+    ''' <summary>Gets the manifest resource names and their storage locations.</summary>
+    Friend ReadOnly Property ManagedResources As ReadOnlyCollection(Of PropertyRow)
+
 
 #End Region
 
@@ -532,12 +547,18 @@ Public NotInheritable Class AssemblyInfo
             End Using
 
             If Not fileHasMetadata Then
-                Me.Bundle = SingleFileBundle.TryRead(fileStream)
+                Dim companion As String = Nothing
+                Me.Bundle = SingleFileBundle.TryReadHost(fileStream, filepath, companion)
                 If Me.Bundle Is Nothing Then
-                    Throw New BadImageFormatException($"The file is not a .NET assembly (it has no CLI metadata): {filepath}", filepath)
+                    Me.AppHostAssembly = companion
+                    If Me.AppHostAssembly Is Nothing Then
+                        Throw New BadImageFormatException($"The file is not a .NET assembly (it has no CLI metadata): {filepath}", filepath)
+                    End If
+                    assemblyImage = File.ReadAllBytes(Me.AppHostAssembly)
+                Else
+                    Me.BundleMainAssembly = Me.Bundle.ResolveMainAssembly(fileStream, Path.GetFileName(filepath))
+                    assemblyImage = Me.Bundle.ReadEntry(fileStream, Me.BundleMainAssembly)
                 End If
-                Me.BundleMainAssembly = Me.Bundle.ResolveMainAssembly(fileStream, Path.GetFileName(filepath))
-                assemblyImage = Me.Bundle.ReadEntry(fileStream, Me.BundleMainAssembly)
             End If
 
             Me.ConfigurationFiles = AssemblyInfo.ReadConfigurationFiles(filepath, Me.Bundle, fileStream)
@@ -630,12 +651,17 @@ Public NotInheritable Class AssemblyInfo
 
             ' References
             Me.ReferencedAssemblies = AssemblyInfo.ReadAssemblyReferences(reader)
+            Me.NativeImports = ReadNativeImports(reader)
+            Me.ForwardedTypes = ReadForwarders(reader)
+            Me.ManagedResources = ReadManagedResources(reader)
             Me.NativeModuleReferences = AssemblyInfo.ReadNativeModuleReferences(reader)
         End Using
 
         ' Configuration files
         Dim appConfigFile As ConfigurationFile = Me.GetConfigurationFile(ConfigurationFileKind.AppConfig)
         Dim runtimeConfigFile As ConfigurationFile = Me.GetConfigurationFile(ConfigurationFileKind.RuntimeConfig)
+        Dim deps As ConfigurationFile = Me.GetConfigurationFile(ConfigurationFileKind.DepsJson)
+        Me.PublishedRuntimeIdentifier = If(deps Is Nothing, String.Empty, ReadPublishedRid(deps.Content))
         Me.AppConfig = If(appConfigFile Is Nothing, Nothing, New AppConfigInfo(appConfigFile.Content))
         Me.RuntimeConfig = If(runtimeConfigFile Is Nothing, Nothing, New RuntimeConfigInfo(runtimeConfigFile.Content))
 
@@ -689,8 +715,12 @@ Public NotInheritable Class AssemblyInfo
                 End Using
 
                 ' A native image: it can still be a .NET single-file bundle.
-                Dim bundle As SingleFileBundle = SingleFileBundle.TryRead(stream)
-                Return (bundle IsNot Nothing) AndAlso bundle.Entries.Any(Function(entry As BundleEntry) entry.Type = BundleFileType.Assembly)
+                Dim companion As String = Nothing
+                Dim bundle As SingleFileBundle = SingleFileBundle.TryReadHost(stream, filepath, companion)
+                If bundle IsNot Nothing Then
+                    Return bundle.Entries.Any(Function(entry As BundleEntry) entry.Type = BundleFileType.Assembly)
+                End If
+                Return companion IsNot Nothing
 
             Catch ex As BadImageFormatException
                 ' Not a PE image, or corrupted CLI metadata or bundle manifest: by definition, not a (readable) .NET assembly.
@@ -1001,6 +1031,92 @@ Public NotInheritable Class AssemblyInfo
 
         Dim seconds As Long = CLng(timeDateStamp) And &HFFFFFFFFL
         Return DateTimeOffset.FromUnixTimeSeconds(seconds)
+    End Function
+
+    ''' <summary>Reads the optional RID suffix of runtimeTarget.name in a dependency manifest.</summary>
+    Friend Shared Function ReadPublishedRid(json As String) As String
+        Try
+            Dim target As XElement = JsonDocumentReader.GetMember(JsonDocumentReader.Parse(json), "runtimeTarget")
+            If target IsNot Nothing Then
+                Dim name As XElement = JsonDocumentReader.GetMember(target, "name")
+                If name IsNot Nothing AndAlso CStr(name.Attribute("type")) = "string" Then
+                    Dim parts As String() = name.Value.Split("/"c)
+                    If parts.Length = 2 AndAlso parts(0).Length > 0 Then Return parts(1)
+                End If
+            End If
+        Catch ex As Xml.XmlException
+            ' An invalid optional manifest has no readable runtime target.
+        End Try
+        Return String.Empty
+    End Function
+
+    ''' <summary>Reads the metadata of each declared native import.</summary>
+    Private Shared Function ReadNativeImports(reader As MetadataReader) As ReadOnlyCollection(Of PropertyRow)
+        Dim rows As New List(Of PropertyRow)
+        If reader.GetTableRowCount(TableIndex.ImplMap) > 0 Then
+            For Each handle As MethodDefinitionHandle In reader.MethodDefinitions
+                Dim method As MethodDefinition = reader.GetMethodDefinition(handle)
+                If (method.Attributes And MethodAttributes.PinvokeImpl) = 0 Then Continue For
+                Dim native As MethodImport = method.GetImport()
+                If native.Module.IsNil Then Continue For
+                Dim library As String = reader.GetString(reader.GetModuleReference(native.Module).Name)
+                Dim flags As MethodImportAttributes = native.Attributes
+                Dim convention As MethodImportAttributes = flags And MethodImportAttributes.CallingConventionMask
+                Dim charset As MethodImportAttributes = flags And MethodImportAttributes.CharSetMask
+                Dim lastError As Boolean = (flags And MethodImportAttributes.SetLastError) <> 0
+                Dim managedName As String = MetadataReaderHelper.GetMethodFullName(reader, handle)
+                Dim entryPoint As String = reader.GetString(native.Name)
+                Dim callingConvention As String = convention.ToString().Replace("CallingConvention", "")
+                Dim characterSet As String = If(charset = MethodImportAttributes.CharSetAuto, "Auto", charset.ToString().Replace("CharSet", ""))
+                Dim cells As String() = {managedName, library, entryPoint, callingConvention, characterSet, lastError.ToString()}
+                Dim detail As String = $"{library}!{entryPoint} (Calling convention: {callingConvention}, Character set: {characterSet}, SetLastError: {lastError})"
+                rows.Add(New PropertyRow(managedName, detail, cells))
+            Next
+        End If
+        Return rows.AsReadOnly()
+    End Function
+
+    ''' <summary>Reads forwarding records and their destination assemblies.</summary>
+    Private Shared Function ReadForwarders(reader As MetadataReader) As ReadOnlyCollection(Of PropertyRow)
+        Dim rows As New List(Of PropertyRow)
+        For Each handle As ExportedTypeHandle In reader.ExportedTypes
+            Dim item As ExportedType = reader.GetExportedType(handle)
+            Dim name As String = reader.GetString(item.Name)
+            Dim depth As Integer = 0
+            While item.Implementation.Kind = HandleKind.ExportedType
+                depth += 1
+                If depth > 256 Then Throw New BadImageFormatException("Invalid or excessive exported type nesting.")
+                item = reader.GetExportedType(CType(item.Implementation, ExportedTypeHandle))
+                name = reader.GetString(item.Name) & "+" & name
+            End While
+            If Not item.IsForwarder OrElse item.Implementation.Kind <> HandleKind.AssemblyReference Then Continue For
+            Dim destination As AssemblyReference = reader.GetAssemblyReference(CType(item.Implementation, AssemblyReferenceHandle))
+            Dim ns As String = reader.GetString(item.Namespace)
+            If ns.Length > 0 Then name = ns & "." & name
+            rows.Add(New PropertyRow(name, $"{reader.GetString(destination.Name)}, Version={destination.Version}"))
+        Next
+        Return rows.AsReadOnly()
+    End Function
+
+    ''' <summary>Reads manifest resource locations without loading or deserializing their contents.</summary>
+    Private Shared Function ReadManagedResources(reader As MetadataReader) As ReadOnlyCollection(Of PropertyRow)
+        Dim rows As New List(Of PropertyRow)
+        For Each handle As ManifestResourceHandle In reader.ManifestResources
+            Dim item As ManifestResource = reader.GetManifestResource(handle)
+            Dim storage As String = "Embedded"
+            If Not item.Implementation.IsNil Then
+                Select Case item.Implementation.Kind
+                    Case HandleKind.AssemblyFile
+                        storage = "File: " & reader.GetString(reader.GetAssemblyFile(CType(item.Implementation, AssemblyFileHandle)).Name)
+                    Case HandleKind.AssemblyReference
+                        storage = "Assembly: " & reader.GetString(reader.GetAssemblyReference(CType(item.Implementation, AssemblyReferenceHandle)).Name)
+                    Case Else
+                        storage = "External"
+                End Select
+            End If
+            rows.Add(New PropertyRow(reader.GetString(item.Name), storage))
+        Next
+        Return rows.AsReadOnly()
     End Function
 
     ''' <summary>

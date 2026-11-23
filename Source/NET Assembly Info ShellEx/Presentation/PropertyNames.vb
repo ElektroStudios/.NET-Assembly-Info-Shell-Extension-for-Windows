@@ -46,6 +46,16 @@ Namespace AssemblyInspection
 
         ''' <summary>The title of the group with the deployment, configuration files and Win32 manifest information.</summary>
         Friend Const GroupRuntime As String = "Runtime"
+        
+        ''' <summary>Optional tabs for distinct manifest and interop records.</summary>
+        Friend Const GroupImports As String = "P/Invoke"
+        ''' <summary>Names of native modules referenced by the metadata.</summary>
+        Friend Const GroupModules As String = "Native Modules"
+        ''' <summary>Types forwarded to other assemblies.</summary>
+        Friend Const GroupForwarders As String = "Forwarded Types"
+        ''' <summary>Managed manifest resources.</summary>
+        Friend Const GroupResources As String = "Managed Resources"
+
 
 #End Region
 

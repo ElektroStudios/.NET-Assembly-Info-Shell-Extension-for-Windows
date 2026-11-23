@@ -55,7 +55,7 @@ Friend NotInheritable Class TextViewerForm : Inherits Form ' NOSONAR
         If content Is Nothing Then
             Throw New ArgumentNullException(NameOf(content))
         End If
-        Me.suggestedFileName = suggestedFileName
+        Me.suggestedFileName = AssemblyInspection.AssemblyInfoReport.SafeFileName(suggestedFileName)
 
         Me.SuspendLayout()
         Me.Text = title

@@ -190,7 +190,7 @@ Public NotInheritable Class AssemblyInfoPresenterTests
     End Sub
 
     <TestMethod>
-    Public Sub CreateGroups_ReferencesGroup_ListsAssembliesThenNativeModules()
+    Public Sub CreateGroups_ReferencesAndNativeModulesAreSeparate()
         Dim info As AssemblyInfo = TestHelpers.Inspect(
             Sub(o As FixtureOptions)
                 o.CoreLibrary = FixtureCoreLibrary.Mscorlib
@@ -199,11 +199,12 @@ Public NotInheritable Class AssemblyInfoPresenterTests
 
         Dim references As PropertyGroup = AssemblyInfoPresenterTests.GetGroup(info, PropertyNames.GroupReferences)
 
-        Assert.AreEqual(2, references.Rows.Count)
+        Assert.AreEqual(1, references.Rows.Count)
         Assert.AreEqual("mscorlib", references.Rows(0).Name)
         Assert.AreEqual("4.0.0.0", references.Rows(0).Value)
-        Assert.AreEqual("kernel32.dll", references.Rows(1).Name)
-        Assert.AreEqual(PropertyNames.NativeLibraryValue, references.Rows(1).Value)
+        Dim modules As PropertyGroup = AssemblyInfoPresenterTests.GetGroup(info, PropertyNames.GroupModules)
+        Assert.AreEqual("kernel32.dll", modules.Rows.Single().Name)
+        Assert.AreEqual(PropertyNames.NativeLibraryValue, modules.Rows.Single().Value)
     End Sub
 
     <TestMethod>

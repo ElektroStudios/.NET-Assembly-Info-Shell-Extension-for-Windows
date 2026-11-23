@@ -64,7 +64,7 @@ Namespace AssemblyInspection
                 Throw New ArgumentNullException(NameOf(timeZone))
             End If
 
-            Dim groups As PropertyGroup() = {
+            Dim groups As New List(Of PropertyGroup) From {
                 AssemblyInfoPresenter.CreateProductGroup(info),
                 AssemblyInfoPresenter.CreateBuildGroup(info, timeZone),
                 AssemblyInfoPresenter.CreateIdentityGroup(info),
@@ -72,7 +72,14 @@ Namespace AssemblyInspection
                 AssemblyInfoPresenter.CreateReferencesGroup(info),
                 AssemblyInfoPresenter.CreateRuntimeGroup(info)
             }
-            Return Array.AsReadOnly(groups)
+            If info.NativeImports.Count > 0 Then groups.Add(New PropertyGroup(PropertyNames.GroupImports, info.NativeImports))
+            If info.ManagedResources.Count > 0 Then groups.Add(New PropertyGroup(PropertyNames.GroupResources, info.ManagedResources))
+            If info.ForwardedTypes.Count > 0 Then groups.Add(New PropertyGroup(PropertyNames.GroupForwarders, info.ForwardedTypes))
+            If info.NativeModuleReferences.Count > 0 Then
+                groups.Add(New PropertyGroup(PropertyNames.GroupModules, info.NativeModuleReferences.Select(
+                    Function(moduleName As String) New PropertyRow(moduleName, PropertyNames.NativeLibraryValue))))
+            End If
+            Return groups.AsReadOnly()
         End Function
 
         ''' <summary>
@@ -543,6 +550,22 @@ Namespace AssemblyInspection
                 rows.Add(New PropertyRow(PropertyNames.BundleHostPlatform, info.BundleHostPlatform))
             End If
 
+            Dim packaging As String = "Managed PE file"
+            If info.Bundle IsNot Nothing Then
+                packaging = "Single-file apphost"
+                For Each entry As BundleEntry In info.Bundle.Entries
+                    Dim stored As Long = If(entry.IsCompressed, entry.CompressedSize, entry.Size)
+                    rows.Add(New PropertyRow("Bundle File: " & entry.RelativePath, $"{entry.Type}, original: {entry.Size:N0} bytes, stored: {stored:N0} bytes"))
+                Next
+            ElseIf info.AppHostAssembly IsNot Nothing Then
+                packaging = "Apphost with external managed assembly"
+                rows.Add(New PropertyRow("Managed Assembly File", Path.GetFileName(info.AppHostAssembly)))
+                rows.Add(New PropertyRow("Host Platform", info.BundleHostPlatform))
+            End If
+            rows.Add(New PropertyRow("File Layout", packaging))
+            If info.PublishedRuntimeIdentifier.Length > 0 Then
+                rows.Add(New PropertyRow("Published Runtime Identifier", info.PublishedRuntimeIdentifier))
+            End If
             rows.Add(New PropertyRow(PropertyNames.Deployment, AssemblyInfoPresenter.FormatDeployment(info)))
             rows.Add(New PropertyRow(PropertyNames.Trimmable, AssemblyInfoPresenter.FormatOptionalBoolean(info.IsTrimmable)))
 
@@ -623,7 +646,7 @@ Namespace AssemblyInspection
         End Function
 
         ''' <summary>
-        ''' Creates the "References" group: the referenced assemblies, followed by the native modules referenced by P/Invoke.
+        ''' Creates the managed assembly references group.
         ''' </summary>
         ''' <param name="info">
         ''' The assembly information.
@@ -637,10 +660,6 @@ Namespace AssemblyInspection
             For Each reference As AssemblyName In info.ReferencedAssemblies
                 rows.Add(New PropertyRow(reference.Name, AssemblyInfoPresenter.FormatReference(reference)))
             Next reference
-
-            For Each moduleName As String In info.NativeModuleReferences
-                rows.Add(New PropertyRow(moduleName, PropertyNames.NativeLibraryValue))
-            Next moduleName
 
             If rows.Count = 0 Then
                 rows.Add(New PropertyRow(PropertyNames.NoReferences, String.Empty))

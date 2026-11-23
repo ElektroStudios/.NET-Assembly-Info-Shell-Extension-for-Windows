@@ -309,6 +309,23 @@ Partial Public Class PropertyPage : Inherits SharpPropertyPage
 
     End Sub
 
+    ''' <summary>Adds a document viewer for a nonempty set of report rows.</summary>
+    Private Sub AddInspectionMenuItem(title As String, groupTitle As String, prefix As String, fileSuffix As String)
+        Dim group As PropertyGroup = Me.groups.Single(Function(candidate As PropertyGroup) candidate.Title = groupTitle)
+        Dim rows As List(Of PropertyRow) = group.Rows.Where(Function(row As PropertyRow) row.Name.StartsWith(prefix, StringComparison.Ordinal)).ToList()
+        If rows.Count = 0 Then Return
+        Dim item As New ToolStripMenuItem(title, My.Resources.Manifest)
+        AddHandler item.Click,
+            Sub(sender As Object, args As EventArgs)
+                Dim content As String = If(groupTitle = PropertyNames.GroupImports, AssemblyInfoReport.FormatImports(rows),
+                    String.Join(Environment.NewLine, rows.Select(Function(row As PropertyRow) row.Name.Substring(prefix.Length) & ControlChars.Tab & row.Value)))
+                Using form As New TextViewerForm(title & " - " & Path.GetFileName(Me.filePath), Path.GetFileName(Me.filePath) & "." & fileSuffix & ".txt", content)
+                    form.ShowDialog(Me)
+                End Using
+            End Sub
+        Me.ToolStripDropDownButtonConfig.DropDownItems.Add(item)
+    End Sub
+
     ''' <summary>Shows a configuration file.</summary>
     Private Sub ConfigurationFileMenuItem_Click(sender As Object, e As EventArgs)
 
@@ -364,16 +381,52 @@ Partial Public Class PropertyPage : Inherits SharpPropertyPage
 
         End Try
 
-        If Me.groups.Count <> Me.listViews.Length Then
-            Throw New InvalidOperationException($"Expected {Me.listViews.Length} property groups, but got {Me.groups.Count}.")
-        End If
+
 
         For i As Integer = 0 To Me.listViews.Length - 1
             Me.listViews(i).Tag = Me.groups(i)
         Next i
 
+        Me.RefreshOptionalTabs()
         Me.UpdateCommands()
 
+    End Sub
+
+    ''' <summary>Rebuilds only the data-dependent tabs when the preview or property sheet loads a file.</summary>
+    Private Sub RefreshOptionalTabs()
+        Dim tabs As TabControl = Me.TabControlListViews
+        If tabs.SelectedIndex >= Me.listViews.Length Then tabs.SelectedIndex = 0
+        While tabs.TabPages.Count > Me.listViews.Length
+            Dim page As TabPage = tabs.TabPages(tabs.TabPages.Count - 1)
+            tabs.TabPages.Remove(page)
+            page.Dispose()
+        End While
+        For Each group As PropertyGroup In Me.groups.Skip(Me.listViews.Length)
+            Dim page As New TabPage(group.Title) With {.UseVisualStyleBackColor = True}
+            Dim view As New ListView With {
+                .View = System.Windows.Forms.View.Details, .Dock = DockStyle.Fill, .FullRowSelect = True,
+                .HideSelection = False, .UseCompatibleStateImageBehavior = False,
+                .HeaderStyle = ColumnHeaderStyle.Nonclickable, .ShowItemToolTips = True,
+                .ContextMenuStrip = Me.ContextMenuStripListView, .Tag = group
+            }
+            Dim headers As String()
+            Select Case group.Title
+                Case PropertyNames.GroupImports
+                    headers = AssemblyInfoReport.ImportHeaders()
+                Case PropertyNames.GroupResources
+                    headers = {"Resource Name", "Storage"}
+                Case PropertyNames.GroupForwarders
+                    headers = {"Type", "Destination Assembly"}
+                Case Else
+                    headers = {"Native Library", "Description"}
+            End Select
+            For Each header As String In headers
+                view.Columns.Add(header)
+            Next
+            AddHandler view.SelectedIndexChanged, AddressOf Me.ListView_SelectedIndexChanged
+            page.Controls.Add(view)
+            tabs.TabPages.Add(page)
+        Next
     End Sub
 
     ''' <summary>
@@ -396,6 +449,10 @@ Partial Public Class PropertyPage : Inherits SharpPropertyPage
                 Dim item As New ToolStripMenuItem(text, My.Resources.Config, AddressOf Me.ConfigurationFileMenuItem_Click) With {.Tag = file}
                 Me.ToolStripDropDownButtonConfig.DropDownItems.Add(item)
             Next file
+        End If
+        If hasInfo Then
+            If Me.info.NativeImports.Count > 0 Then Me.AddInspectionMenuItem("View P/Invoke Imports", PropertyNames.GroupImports, String.Empty, "PInvokeImports")
+            Me.AddInspectionMenuItem("View Bundle Contents", PropertyNames.GroupRuntime, "Bundle File: ", "BundleContents")
         End If
         Me.ToolStripDropDownButtonConfig.Enabled = Me.ToolStripDropDownButtonConfig.DropDownItems.Count <> 0
 
@@ -441,7 +498,7 @@ Partial Public Class PropertyPage : Inherits SharpPropertyPage
             If (filter.Length = 0) OrElse
                (row.Name.IndexOf(filter, StringComparison.OrdinalIgnoreCase) <> -1) OrElse
                (row.Value.IndexOf(filter, StringComparison.OrdinalIgnoreCase) <> -1) Then
-                lv.Items.Add(New ListViewItem({row.Name, row.Value}) With {.Tag = row})
+                lv.Items.Add(New ListViewItem(If(row.Cells Is Nothing, {row.Name, row.Value}, row.Cells.ToArray())) With {.Tag = row})
             End If
         Next row
 
@@ -508,7 +565,7 @@ Partial Public Class PropertyPage : Inherits SharpPropertyPage
         Using sfd As New SaveFileDialog() With {
             .AddExtension = True,
             .CheckPathExists = True,
-            .FileName = $"{baseName}.txt",
+            .FileName = AssemblyInfoReport.SafeFileName($"{baseName}.txt"),
             .Filter = AssemblyInfoReport.SaveFileDialogFilter,
             .FilterIndex = PropertyPage.lastExportFilterIndex,
             .OverwritePrompt = True,
@@ -588,12 +645,10 @@ Partial Public Class PropertyPage : Inherits SharpPropertyPage
     End Function
 
     ''' <summary>Determines whether an exception is an expected error while reading an assembly file.</summary>
-    Private Shared Function IsReadError(ex As Exception) As Boolean
+    Friend Shared Function IsReadError(ex As Exception) As Boolean
 
-        Return (TypeOf ex Is BadImageFormatException) OrElse
-               (TypeOf ex Is IOException) OrElse
-               (TypeOf ex Is UnauthorizedAccessException) OrElse
-               (TypeOf ex Is NotSupportedException)
+        Return Not (TypeOf ex Is OutOfMemoryException OrElse TypeOf ex Is StackOverflowException OrElse
+                    TypeOf ex Is AccessViolationException OrElse TypeOf ex Is Threading.ThreadAbortException)
 
     End Function
 

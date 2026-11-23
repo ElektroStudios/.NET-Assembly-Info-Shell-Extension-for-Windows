@@ -139,7 +139,7 @@ Namespace Fixtures
         ''' <returns>
         ''' The file bytes.
         ''' </returns>
-        Friend Shared Function Build(entries As IEnumerable(Of FixtureBundleEntry), Optional majorVersion As Integer = 6) As Byte()
+        Friend Shared Function Build(entries As IEnumerable(Of FixtureBundleEntry), Optional majorVersion As Integer = 6, Optional boundName As String = Nothing) As Byte()
 
             ' Placeholder: 8-byte header offset (zero) + 32-byte signature, surrounded by padding.
             Dim dataSection As New List(Of Byte)
@@ -148,6 +148,12 @@ Namespace Fixtures
             dataSection.AddRange(New Byte(7) {})
             dataSection.AddRange(SingleFileBundle.Signature)
             dataSection.AddRange(New Byte(63) {})
+
+            If boundName IsNot Nothing Then
+                Dim slot(1023) As Byte
+                Encoding.UTF8.GetBytes(boundName).CopyTo(slot, 0)
+                dataSection.AddRange(slot)
+            End If
 
             Dim peBlob As New BlobBuilder()
             Dim host As New NativeHostPEBuilder(Machine.Amd64, dataSection.ToArray())

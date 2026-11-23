@@ -110,6 +110,9 @@ Namespace Fixtures
         ''' <summary>Gets the native module (DLL) names referenced by P/Invoke.</summary>
         Friend ReadOnly Property NativeModules As New List(Of String)
 
+        ''' <summary>Emits external resource and type forwarding records for the inspection tests.</summary>
+        Friend Property IncludeManifestDetails As Boolean
+
         ''' <summary>Gets the assembly-level declarative security entries (action and permission set blob).</summary>
         Friend ReadOnly Property DeclarativeSecurity As New List(Of Tuple(Of DeclarativeSecurityAction, Byte()))
 

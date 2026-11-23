@@ -114,6 +114,14 @@ Namespace Fixtures
                     flags, Nothing)
             Next reference
 
+            If options.IncludeManifestDetails Then
+                Dim destination As AssemblyReferenceHandle = metadata.AddAssemblyReference(metadata.GetOrAddString("NewLibrary"), New Version(2, 0, 0, 0), Nothing, Nothing, Nothing, Nothing)
+                Dim parent As ExportedTypeHandle = metadata.AddExportedType(CType(&H200000, TypeAttributes), metadata.GetOrAddString("Example"), metadata.GetOrAddString("Widget"), destination, 0)
+                metadata.AddExportedType(TypeAttributes.NestedPublic, Nothing, metadata.GetOrAddString("Child"), parent, 0)
+                Dim linked As AssemblyFileHandle = metadata.AddAssemblyFile(metadata.GetOrAddString("Linked.dat"), Nothing, False)
+                metadata.AddManifestResource(ManifestResourceAttributes.Public, metadata.GetOrAddString("Data"), linked, 0UI)
+            End If
+
             Dim typeReferences As New Dictionary(Of String, TypeReferenceHandle)(StringComparer.Ordinal)
 
             ' Assembly attributes and declarative security.

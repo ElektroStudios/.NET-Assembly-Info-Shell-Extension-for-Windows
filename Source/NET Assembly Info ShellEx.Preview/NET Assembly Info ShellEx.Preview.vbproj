@@ -35,7 +35,7 @@
     <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net481" Version="1.0.3" PrivateAssets="all" />
     <!-- Same versions as the shell extension, so the dependencies are copied to the output directory. -->
     <PackageReference Include="SharpShell" Version="2.7.2" />
-    <PackageReference Include="System.Reflection.Metadata" Version="10.0.14" />
+    <PackageReference Include="System.Reflection.Metadata" Version="11.0.0" />
   </ItemGroup>
 
   <ItemGroup>

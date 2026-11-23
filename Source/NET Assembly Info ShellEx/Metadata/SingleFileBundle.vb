@@ -172,6 +172,29 @@ Public NotInheritable Class SingleFileBundle ' NOSONAR
 
 #Region " Public Methods "
 
+    ''' <summary>Matches the UTF-8 name and zero-filled remainder of the SDK's 1024-byte path buffer.</summary>
+    Private Shared Function ContainsBoundName(data As Byte(), name As Byte()) As Boolean
+        Const SlotSize As Integer = 1024
+        If name.Length > SlotSize Then Return False
+        Dim offset As Integer = 0
+        While offset <= data.Length - SlotSize
+            offset = Array.IndexOf(data, name(0), offset)
+            If offset < 0 OrElse offset > data.Length - SlotSize Then Exit While
+            Dim length As Integer = 1
+            While length < name.Length AndAlso data(offset + length) = name(length)
+                length += 1
+            End While
+            If length = name.Length AndAlso (offset = 0 OrElse data(offset - 1) = 0) Then
+                While length < SlotSize AndAlso data(offset + length) = 0
+                    length += 1
+                End While
+                If length = SlotSize Then Return True
+            End If
+            offset += 1
+        End While
+        Return False
+    End Function
+
     ''' <summary>
     ''' Reads the bundle manifest of the specified PE image, if it is a single-file bundle.
     ''' </summary>
@@ -186,6 +209,13 @@ Public NotInheritable Class SingleFileBundle ' NOSONAR
     ''' </exception>
     Public Shared Function TryRead(stream As Stream) As SingleFileBundle
 
+        Dim unused As String = Nothing
+        Return TryReadHost(stream, Nothing, unused)
+    End Function
+
+    ''' <summary>Reads the bundle index or identifies an SDK apphost bound to a same-name sibling DLL.</summary>
+    Friend Shared Function TryReadHost(stream As Stream, filePath As String, ByRef companionPath As String) As SingleFileBundle
+        companionPath = Nothing
         If stream Is Nothing Then
             Throw New ArgumentNullException(NameOf(stream))
         End If
@@ -196,7 +226,15 @@ Public NotInheritable Class SingleFileBundle ' NOSONAR
         stream.Position = 0
         Dim headers As New PEHeaders(stream)
 
-        Dim headerOffset As Long = SingleFileBundle.FindHeaderOffset(stream, headers)
+        Dim expectedPath As String = Nothing
+        Dim boundName As Byte() = Nothing
+        If String.Equals(Path.GetExtension(filePath), ".exe", StringComparison.OrdinalIgnoreCase) Then
+            expectedPath = Path.ChangeExtension(filePath, ".dll")
+            boundName = Encoding.UTF8.GetBytes(Path.GetFileName(expectedPath) & ChrW(0))
+        End If
+        Dim bound As Boolean
+        Dim headerOffset As Long = SingleFileBundle.FindHeaderOffset(stream, headers, boundName, bound)
+        If bound AndAlso headerOffset = 0 Then companionPath = expectedPath
         If headerOffset = 0 Then
             Return Nothing ' Not an apphost, or an apphost without bundle (framework-dependent, not single-file).
         End If
@@ -398,10 +436,12 @@ Public NotInheritable Class SingleFileBundle ' NOSONAR
     ''' <returns>
     ''' The bundle header offset, or zero if the signature was not found (or the apphost is not a bundle).
     ''' </returns>
-    Private Shared Function FindHeaderOffset(stream As Stream, headers As PEHeaders) As Long
+    Private Shared Function FindHeaderOffset(stream As Stream, headers As PEHeaders, companionName As Byte(), ByRef bound As Boolean) As Long
 
         Const DataSectionFlags As SectionCharacteristics = SectionCharacteristics.ContainsInitializedData Or SectionCharacteristics.MemWrite
 
+        Dim hasMarker As Boolean
+        Dim hasName As Boolean
         For Each section As SectionHeader In headers.SectionHeaders
             If (section.SectionCharacteristics And DataSectionFlags) <> DataSectionFlags Then
                 Continue For
@@ -417,7 +457,16 @@ Public NotInheritable Class SingleFileBundle ' NOSONAR
 
             Dim index As Integer = SingleFileBundle.IndexOf(data, SingleFileBundle.Signature)
             If index >= 8 Then
-                Return BitConverter.ToInt64(data, index - 8)
+                Dim offset As Long = BitConverter.ToInt64(data, index - 8)
+                If offset <> 0 OrElse companionName Is Nothing Then Return offset
+                hasMarker = True
+            End If
+            If companionName IsNot Nothing Then
+                If Not hasName Then hasName = ContainsBoundName(data, companionName)
+                If hasMarker AndAlso hasName Then
+                    bound = True
+                    Return 0
+                End If
             End If
         Next section
 

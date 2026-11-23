@@ -1,6 +1,17 @@
 ﻿# .NET Assembly Info Shell-Extension Change Log 📋
 
-## v1.2 *(current)* 🆕
+## v1.3 *(current)* 🆕
+#### 🚀 New Features:
+ -  The P/Invoke tab lists each managed method, native library, entry point, calling convention, character set and SetLastError flag. The imports viewer, clipboard and saved text use an aligned, six-column report.
+ -  Managed Resources lists manifest resources and their storage. Forwarded Types identifies destination assemblies for forwarded and nested types. Native Modules lists module references. Each of these tabs and the P/Invoke tab appears only when it has entries.
+ -  References lists managed assembly references. Attributes lists assembly attributes and related settings.
+ -  Runtime distinguishes managed PE files, single-file bundles and SDK apphosts bound to a same-name sibling DLL. It shows the published runtime identifier when declared in the dependency manifest.
+ -  The single-file inventory lists the path, type, original size and stored size of each bundled file. The existing toolbar document menu opens the bundle and P/Invoke viewers.
+#### 🌟 Improvements:
+ -  Handle recoverable inspection failures, including missing or unreadable apphost companions, at the Explorer property sheet boundary.
+ -  Generate Windows-safe default file names for text documents and report exports.
+
+## v1.2 🔄
 #### 🚀 New Features:
  -  New "References" tab, listing the referenced assemblies (with version and culture) 
       and the native DLLs imported through P/Invoke.

@@ -58,7 +58,7 @@ Namespace FileTimesPropertySheet
                 ' Reads only the PE/CLI headers; the assembly is never loaded into the Explorer process.
                 Return AssemblyInfo.IsAssemblyFile(filepath)
 
-            Catch ex As Exception When (TypeOf ex Is IOException) OrElse (TypeOf ex Is UnauthorizedAccessException)
+            Catch ex As Exception When PropertyPage.IsReadError(ex)
                 ' The file is locked or not accessible: there is nothing that the property page could show.
                 Return False
 
